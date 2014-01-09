@@ -1,0 +1,109 @@
+DEBUG=0
+
+UNAME=$(shell uname -a)
+
+ifeq ($(platform),)
+platform = unix
+ifeq ($(UNAME),)
+   platform = win
+else ifneq ($(findstring MINGW,$(UNAME)),)
+   platform = win
+else ifneq ($(findstring Darwin,$(UNAME)),)
+   platform = osx
+else ifneq ($(findstring win,$(UNAME)),)
+   platform = win
+endif
+endif
+
+TARGET_NAME := stonesoup
+
+ifneq (,$(findstring unix,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.so
+   CPPFLAGS += -msse -msse2   
+   LDFLAGS += -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
+ifneq (,$(findstring gles,$(platform)))
+   CPPFLAGS += -DGLES
+   GL_LIB := -lGLESv2
+else
+   GL_LIB := -lGL
+endif
+else ifneq (,$(findstring osx,$(platform)))
+   TARGET := $(TARGET_NAME)_libretro.dylib
+   LDFLAGS += -dynamiclib
+   GL_LIB := -framework OpenGL
+else ifneq (,$(findstring win,$(platform)))
+   CC = gcc
+   CXX = g++
+   TARGET := $(TARGET_NAME)_libretro.dll
+   CPPFLAGS += -msse -msse2   
+   LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=libretro/link.T -lwinmm -lgdi32
+   GL_LIB := -lopengl32
+endif
+
+## Build object list
+CCSOURCES   += $(wildcard source/*.cc) $(wildcard source/rltiles/*cc) $(wildcard source/prebuilt/*cc) \
+               $(wildcard libretro/*cc)
+CCBLACKLIST += source/tileweb-text.cc source/libunix.cc
+CCFINAL     += $(filter-out $(CCBLACKLIST), $(CCSOURCES))
+OBJECTS     += $(CCFINAL:.cc=.o)
+OBJECTS     += libretro/libco/libco.o
+
+LUASOURCES  += $(wildcard source/contrib/lua/src/*.c)
+LUABLACK    += source/contrib/lua/src/lua.c source/contrib/lua/src/luac.c
+LUAFINAL    += $(filter-out $(LUABLACK), $(LUASOURCES))
+OBJECTS     += $(LUAFINAL:.c=.o)
+
+SQLSOURCES  += $(wildcard source/contrib/sqlite/*.c)
+SQLBLACK    += source/contrib/sqlite/shell.c
+SQLFINAL    += $(filter-out $(SQLBLACK), $(SQLSOURCES))
+OBJECTS     += $(SQLFINAL:.c=.o)
+
+ZIPSOURCES  += $(wildcard source/contrib/zlib/*.c)
+ZIPBLACK    += source/contrib/zlib/example.c source/contrib/zlib/minigzip.c
+ZIPFINAL    += $(filter-out $(ZIPBLACK), $(ZIPSOURCES))
+OBJECTS     += $(ZIPFINAL:.c=.o)
+
+PNGSOURCES  += $(wildcard source/contrib/libpng/*.c)
+PNGBLACK    += 
+PNGFINAL    += $(filter-out $(PNGBLACK), $(PNGSOURCES))
+OBJECTS     += $(PNGFINAL:.c=.o)
+
+
+#FTSOURCES  += $(wildcard source/contrib/freetype/src/*/*c)
+CPPFLAGS    += -I/usr/local/include/freetype2
+#OBJECTS    += $(FTSOURCES:.c=.o)
+
+# Build flags
+CPPFLAGS += -Isource/rltiles -Isource/contrib/lua/src -Isource/contrib/pcre -Isource
+CPPFLAGS += -Isource/contrib/libpng -Isource/contrib/zlib
+CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_GL -DUSE_FT
+CPPFLAGS += -D__LIBRETRO__
+CPPFLAGS += -DPROPORTIONAL_FONT=\"DejaVuSans.ttf\" -DMONOSPACED_FONT=\"DejaVuSansMono.ttf\"
+CXXFLAGS += -std=c++11
+LDFLAGS  += -lfreetype
+
+# Rules
+ifeq ($(DEBUG), 1)
+   CPPFLAGS += -O0 -g
+   CPPFLAGS += -DOPENGL_DEBUG
+else
+   CPPFLAGS += -O3 -DNDEBUG
+endif
+
+all: $(TARGET)
+
+$(TARGET): generate $(OBJECTS)
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
+
+generate:
+	cd source && ./util/gen-mst.pl
+	cd source && ./util/art-data.pl
+	cd source && ./util/gen-mi-enum
+	cd source && ./util/cmd-name.pl
+	cd source && ./util/gen_ver.pl build.h
+	cd source && ./util/gen-cflg.pl compflag.h "$(CPPFLAGS) $(CXXFLAGS)" "$(LDFLAGS)" "libretro" "retro"
+
+clean:
+	rm -f $(OBJECTS) $(TARGET)
+
+.PHONY: clean generate

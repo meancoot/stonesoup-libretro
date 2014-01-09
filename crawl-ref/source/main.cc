@@ -247,7 +247,11 @@ __attribute__((externally_visible))
 # endif
 #endif
 
+#ifndef __LIBRETRO__
 int main(int argc, char *argv[])
+#else
+int ss_main(int argc, char* argv[])
+#endif
 {
 #ifndef __ANDROID__
 # ifdef DGAMELAUNCH

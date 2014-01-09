@@ -26,6 +26,10 @@
 # endif
 #endif
 
+// LIBRETRO
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+
 #ifdef __ANDROID__
 # include <android/log.h>
 #endif
@@ -74,7 +78,9 @@ OGLStateManager::OGLStateManager()
 
 void OGLStateManager::set(const GLState& state)
 {
+#ifndef __LIBRETRO__
     if (state.array_vertex != m_current_state.array_vertex)
+#endif
     {
         if (state.array_vertex)
         {
@@ -88,7 +94,9 @@ void OGLStateManager::set(const GLState& state)
         }
     }
 
+#ifndef __LIBRETRO__
     if (state.array_texcoord != m_current_state.array_texcoord)
+#endif
     {
         if (state.array_texcoord)
         {
@@ -102,7 +110,9 @@ void OGLStateManager::set(const GLState& state)
         }
     }
 
+#ifndef __LIBRETRO__
     if (state.array_colour != m_current_state.array_colour)
+#endif
     {
         if (state.array_colour)
         {
@@ -122,7 +132,9 @@ void OGLStateManager::set(const GLState& state)
         }
     }
 
+#ifndef __LIBRETRO__
     if (state.texture != m_current_state.texture)
+#endif
     {
         if (state.texture)
         {
@@ -136,7 +148,9 @@ void OGLStateManager::set(const GLState& state)
         }
     }
 
+#ifndef __LIBRETRO__
     if (state.blend != m_current_state.blend)
+#endif
     {
         if (state.blend)
         {
@@ -150,7 +164,9 @@ void OGLStateManager::set(const GLState& state)
         }
     }
 
+#ifndef __LIBRETRO__
     if (state.depthtest != m_current_state.depthtest)
+#endif
     {
         if (state.depthtest)
         {
@@ -164,8 +180,10 @@ void OGLStateManager::set(const GLState& state)
         }
     }
 
+#ifndef __LIBRETRO__
     if (state.alphatest != m_current_state.alphatest
         || state.alpharef != m_current_state.alpharef)
+#endif
     {
         if (state.alphatest)
         {
@@ -180,7 +198,9 @@ void OGLStateManager::set(const GLState& state)
         }
     }
 
+#ifndef __LIBRETRO__
     if (state.colour != m_current_state.colour)
+#endif
     {
         glColor4f(state.colour.r, state.colour.g,
                   state.colour.b, state.colour.a);
