@@ -1,4 +1,3 @@
-#include <OpenGL/gl.h>
 #include <stdio.h>
 #include <string.h>
 #include "libco/libco.h"
@@ -6,11 +5,14 @@
 
 #include "../source/AppHdr.h"
 #include "../source/windowmanager-retro.h"
+#include "../source/glwrapper-fb.h"
 
 extern WindowManager *wm;
 static RetroWrapper *retrowm;
 
-static struct retro_hw_render_callback render_iface;
+extern GLStateManager *glmanager;
+static FBStateManager *fbmanager;
+
 static cothread_t main_thread;
 static cothread_t game_thread;
 
@@ -126,44 +128,26 @@ void retro_deinit(void)
 }
 
 bool retro_load_game(const struct retro_game_info *game)
-{
-   memset(&render_iface, 0, sizeof(render_iface));
-#ifndef GLES
-    render_iface.context_type = RETRO_HW_CONTEXT_OPENGL;
-#else
-    render_iface.context_type = RETRO_HW_CONTEXT_OPENGLES2;
-#endif
-    render_iface.context_reset = core_gl_context_reset;
-    render_iface.depth = true;
-    render_iface.bottom_left_origin = true;
-    render_iface.cache_context = true;
-    
-    if (!environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &render_iface))
-    {
-       if (log_cb)
-          log_cb(RETRO_LOG_ERROR, "stonesoup: libretro frontend doesn't have OpenGL support.");
-       return false;
-    }
-    
+{    
     strlcpy(rc_path, game->path, PATH_MAX);
 
     main_thread = co_active();
     game_thread = co_create(65536 * sizeof(void*) * 16, main_wrap);
-
     return true;
 }
 
 void retro_run (void)
 {
     retrowm = wm ? (RetroWrapper*)wm : 0;
+    fbmanager = glmanager ? (FBStateManager*)glmanager : 0;
 
     poll_cb();
-
-    glBindFramebuffer(GL_FRAMEBUFFER, render_iface.get_current_framebuffer());
-    glViewport(0, 0, 1024, 768);
-   
     co_switch(game_thread);
-    video_cb(have_frame ? RETRO_HW_FRAME_BUFFER_VALID : 0, 1024, 768, 0);
+    
+    if (fbmanager && fbmanager->m_pixels)
+        video_cb(fbmanager->m_pixels, fbmanager->m_width, fbmanager->m_height, 0);
+    else
+        video_cb(0, 1024, 768, 0);
 }
 
 // Stubs

@@ -21,23 +21,15 @@ ifneq (,$(findstring unix,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
    CPPFLAGS += -msse -msse2   
    LDFLAGS += -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
-ifneq (,$(findstring gles,$(platform)))
-   CPPFLAGS += -DGLES
-   GL_LIB := -lGLESv2
-else
-   GL_LIB := -lGL
-endif
 else ifneq (,$(findstring osx,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dylib
    LDFLAGS += -dynamiclib
-   GL_LIB := -framework OpenGL
 else ifneq (,$(findstring win,$(platform)))
    CC = gcc
    CXX = g++
    TARGET := $(TARGET_NAME)_libretro.dll
    CPPFLAGS += -msse -msse2   
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=libretro/link.T -lwinmm -lgdi32
-   GL_LIB := -lopengl32
 endif
 
 ## Build object list
@@ -76,7 +68,7 @@ CPPFLAGS    += -I/usr/local/include/freetype2
 # Build flags
 CPPFLAGS += -Isource/rltiles -Isource/contrib/lua/src -Isource/contrib/pcre -Isource
 CPPFLAGS += -Isource/contrib/libpng -Isource/contrib/zlib
-CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_GL -DUSE_FT
+CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_FB -DUSE_FT
 CPPFLAGS += -D__LIBRETRO__
 CPPFLAGS += -DPROPORTIONAL_FONT=\"DejaVuSans.ttf\" -DMONOSPACED_FONT=\"DejaVuSansMono.ttf\"
 CXXFLAGS += -std=c++11
@@ -85,7 +77,6 @@ LDFLAGS  += -lfreetype
 # Rules
 ifeq ($(DEBUG), 1)
    CPPFLAGS += -O0 -g
-   CPPFLAGS += -DOPENGL_DEBUG
 else
    CPPFLAGS += -O3 -DNDEBUG
 endif
@@ -93,7 +84,7 @@ endif
 all: $(TARGET)
 
 $(TARGET): generate $(OBJECTS)
-	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS) $(GL_LIB)
+	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
 
 generate:
 	cd source && ./util/gen-mst.pl
