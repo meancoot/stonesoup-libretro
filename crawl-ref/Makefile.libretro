@@ -61,18 +61,24 @@ PNGFINAL    += $(filter-out $(PNGBLACK), $(PNGSOURCES))
 OBJECTS     += $(PNGFINAL:.c=.o)
 
 
-#FTSOURCES  += $(wildcard source/contrib/freetype/src/*/*c)
-CPPFLAGS    += -I/usr/local/include/freetype2
-#OBJECTS    += $(FTSOURCES:.c=.o)
+FTSOURCES   += source/contrib/freetype/src/autofit/autofit.c \
+               source/contrib/freetype/src/base/ftbase.c \
+               source/contrib/freetype/src/base/ftinit.c \
+               source/contrib/freetype/src/base/ftsystem.c \
+               source/contrib/freetype/src/sfnt/sfnt.c \
+               source/contrib/freetype/src/smooth/smooth.c \
+               source/contrib/freetype/src/truetype/truetype.c
+OBJECTS     += $(FTSOURCES:.c=.o)
+CPPFLAGS    += -DFT2_BUILD_LIBRARY -DDARWIN_NO_CARBON
 
 # Build flags
 CPPFLAGS += -Isource/rltiles -Isource/contrib/lua/src -Isource/contrib/pcre -Isource
-CPPFLAGS += -Isource/contrib/libpng -Isource/contrib/zlib
+CPPFLAGS += -Isource/contrib/libpng -Isource/contrib/zlib -Isource/contrib/freetype/include
+CPPFLAGS += -Isource/contrib/sqlite
 CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_FB -DUSE_FT
 CPPFLAGS += -D__LIBRETRO__
 CPPFLAGS += -DPROPORTIONAL_FONT=\"DejaVuSans.ttf\" -DMONOSPACED_FONT=\"DejaVuSansMono.ttf\"
 CXXFLAGS += -std=c++11
-LDFLAGS  += -lfreetype
 
 # Rules
 ifeq ($(DEBUG), 1)
