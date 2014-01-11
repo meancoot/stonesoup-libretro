@@ -145,9 +145,9 @@ void retro_run (void)
     co_switch(game_thread);
     
     if (fbmanager && fbmanager->m_pixels)
-        video_cb(fbmanager->m_pixels, fbmanager->m_width, fbmanager->m_height, 0);
+        video_cb(fbmanager->m_pixels, fbmanager->m_width, fbmanager->m_height, 1024 * 4);
     else
-        video_cb(0, 1024, 768, 0);
+        video_cb(0, 1024, 768, 1024 * 4);
 }
 
 // Stubs
