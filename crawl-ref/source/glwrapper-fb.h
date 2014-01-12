@@ -6,74 +6,11 @@
 
 #include "glwrapper.h"
 
-struct FBColour : public VColour
-{
-    FBColour() : VColour() { }
-    FBColour(const VColour& c) : VColour(c) { }
-
-    FBColour(unsigned int value)
-    {
-        b =  value        & 0xFF;
-        g = (value >> 8)  & 0xFF;
-        r = (value >> 16) & 0xFF;
-        a = (value >> 24) & 0xFF;
-    }
-    
-    void reverse()
-    {
-        char t = r;
-        r = b;
-        b = t;
-    }
-    
-    void modulate(const FBColour& other)
-    {
-        for (int i = 0; i != 4; i ++)
-            (*this)[i] = ((*this)(i) * other(i)) * 255;
-    }
-    
-    void blend(const FBColour& other)
-    {
-        float src = (*this)(3);
-        float dst = 1.0f - src;
-    
-        for (int i = 0; i != 4; i ++)
-            (*this)[i] = (((*this)(i) * src) + (other(i) * dst)) * 255;
-    }
-    
-    unsigned char& operator[](unsigned int index)
-    {
-        switch (index)
-        {
-            case 0:  return r;
-            case 1:  return g;
-            case 2:  return b;
-            default: return a;
-        }
-    }
-
-    const unsigned char& operator[](unsigned int index) const
-    {
-        switch (index)
-        {
-            case 0:  return r;
-            case 1:  return g;
-            case 2:  return b;
-            default: return a;
-        }
-    }
-    
-    float operator()(unsigned int index) const
-    {
-        return (*this)[index] / 255.0f;
-    }
-};
-
 struct FBTexture
 {
     unsigned int width;
     unsigned int height;
-    FBColour* pixels;
+    unsigned int* pixels;
 
     FBTexture() : width(0), height(0), pixels(0)
     {
@@ -94,10 +31,10 @@ struct FBTexture
         height = height_;
         
         delete[] pixels;
-        pixels = new FBColour[width * height];
+        pixels = new unsigned int[width * height];
     }
     
-    FBColour get_pixel(float u, float v) const
+    const unsigned int* get_pixel_ptr(float u, float v) const
     {
         if (!pixels) return 0;
        
@@ -112,7 +49,13 @@ struct FBTexture
         if (x == width) x -= 1;
         if (y == height) y -= 1;
 
-        return pixels[y * width + x];
+        return &pixels[y * width + x];        
+    }
+    
+    unsigned int get_pixel(float u, float v) const
+    {
+        if (!pixels) return 0;
+        return *get_pixel_ptr(u, v);
     }
 };
 
@@ -138,20 +81,13 @@ public:
                               unsigned int height, MipMapOptions mip_opt,
                               int xoffset=-1, int yoffset=-1);
 public:
-    bool alpha_test(const FBColour& colour) const;
-
-    void scan_line(const GLWPrim& p, FBColour* out, unsigned int width,
+    template<bool TEST, bool MODULATE, bool BLEND>
+    void scan_line(const GLWPrim& p, unsigned int* out, unsigned int width,
                    float u, float v, float step);
-
-    void set_pixel(unsigned int x, unsigned int y, const FBColour& color)
-    {
-        if (x < m_width && y < m_height)
-            m_pixels[y * m_width + x] = color;
-    }
 
     void draw_rect(const GLWPrim& p);
 
-    FBColour *m_pixels;
+    unsigned int *m_pixels;
     unsigned int m_width;
     unsigned int m_height;
     

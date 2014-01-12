@@ -6,6 +6,74 @@
 #include "glwrapper-fb.h"
 #include "options.h"
 
+
+/////////////////////////////////////////////////////////////////////////////
+// Rendering helpers
+
+#define BYTEOF(X, Y) (((X) >> ((Y) * 8)) & 0xFF)
+#define BYTEOFFLOAT(X, Y) (((float)BYTEOF((X), (Y))) / 255.0f)
+#define SETBYTEOF(X, Y, Z) X |= ((Z) << ((Y) * 8))
+
+static bool alpha_test(unsigned int colour, unsigned char ref)
+{
+    return ((colour >> 24) != ref);
+}
+
+static unsigned int modulate(unsigned int c, unsigned int m)
+{
+    unsigned int result = 0;
+    for (int i = 0; i != 4; i ++)
+        SETBYTEOF(result, i, ((BYTEOF(c, i) * BYTEOF(m, i)) >> 8));
+    return result;
+}
+
+static unsigned int blend(unsigned int c, unsigned int m)
+{
+    static bool alpha_init;
+    static float alpha_table[256][256];
+
+    if (!alpha_init)
+        for (int i = 0; i != 256; i ++)
+            for (int j = 0; j != 256; j ++)
+                alpha_table[i][j] = (i / 255.0f) * (j / 255.0f);
+    alpha_init = true;
+
+    if ((c & 0xFF000000UL) == 0xFF00000000UL)
+        return c;
+    else if ((c & 0xFF000000UL) == 0)
+        return m;
+
+    //
+    //  
+    
+    unsigned char src_a = BYTEOF(c, 3);
+    unsigned char dst_a = 255 - src_a;    
+
+    unsigned int result = 0;
+    for (int i = 0; i != 3; i ++)
+    {
+        float src_c = alpha_table[BYTEOF(c, i)][src_a];
+        float dst_c = alpha_table[BYTEOF(m, i)][dst_a];
+    
+        SETBYTEOF(result, i, (unsigned char)((src_c + dst_c) * 255));
+    }
+
+    return result;
+}
+
+static unsigned int get_reversed_colour(const VColour& colour)
+{
+    return (colour.a << 24) | (colour.r << 16) | (colour.g << 8) | colour.b;
+}
+
+static unsigned int get_reversed_colour(unsigned int colour)
+{
+    unsigned int result = colour & 0xFF00FF00;
+    result |= (colour & 0xFF) << 16;
+    result |= (colour >> 16) & 0xFF;
+    return result;
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // Static functions from GLStateManager
 
@@ -62,7 +130,7 @@ void FBStateManager::reset_view_for_resize(const coord_def &m_windowsz)
     m_height = m_windowsz.y;
     
     delete[] m_pixels;
-    m_pixels = new FBColour[m_width * m_height];
+    m_pixels = new unsigned int[m_width * m_height];
 }
 
 void FBStateManager::reset_transform()
@@ -118,7 +186,7 @@ void FBStateManager::load_texture(unsigned char *pixels, unsigned int width,
         
         if (pixels)
             for (unsigned i = 0; i != width * height; i ++)
-                m_texture->pixels[i] = px[i];
+                m_texture->pixels[i] = get_reversed_colour(px[i]);
         else
             memset(m_texture->pixels, 0, width * height * 4);
     }
@@ -139,7 +207,7 @@ void FBStateManager::load_texture(unsigned char *pixels, unsigned int width,
                 if (tx >= m_texture->width)
                     break;
                     
-                m_texture->pixels[ty * m_texture->width + tx] = px[i * width + j];
+                m_texture->pixels[ty * m_texture->width + tx] = get_reversed_colour(px[i * width + j]);
             }
         }
     }
@@ -153,29 +221,22 @@ void FBStateManager::reset_view_for_redraw(float x, float y)
     m_scale = GLW_3VF(1, 1, 1);
 }
 
-bool FBStateManager::alpha_test(const FBColour& colour) const
-{
-    return !m_state.alphatest || colour.a != m_state.alpharef;
-
-}
-
-void FBStateManager::scan_line(const GLWPrim& p, FBColour* out,
+template<bool TEST, bool MODULATE, bool BLEND>
+void FBStateManager::scan_line(const GLWPrim& p, unsigned int* out,
                                unsigned int width, float u, float v, float step)
 {
-    FBColour env_colour = m_state.array_colour ? p.col_s
-                                               : m_state.colour;
-    env_colour.reverse();
+    unsigned int env_colour = get_reversed_colour(m_state.array_colour ? p.col_s
+                                                                       : m_state.colour);
 
     for (unsigned i = 0; i != width; i ++, u += step)
     {
-        const bool have_texture = m_state.texture && m_state.array_texcoord;
-        FBColour colour = have_texture ? m_texture->get_pixel(u, v)
+        unsigned int colour = MODULATE ? m_texture->get_pixel(u, v)
                                        : env_colour;
-                                       
-        if (alpha_test(colour))
+
+        if (!TEST || alpha_test(colour, m_state.alpharef))
         {
-            if (have_texture)     colour.modulate(env_colour);
-            if (m_state.blend)    colour.blend(out[i]);
+            if (MODULATE)  colour = modulate(colour, env_colour);
+            if (BLEND)     colour = blend(colour, out[i]);
             out[i] = colour;
         }
     }
@@ -191,13 +252,32 @@ void FBStateManager::draw_rect(const GLWPrim& p)
     if ((x + w) > m_width)
         w = m_width - x;
 
-    FBColour* out = m_pixels + (y * m_width) + x;
+    unsigned int* out = m_pixels + (y * m_width) + x;
 
     float x_step = (p.tex_ex - p.tex_sx) / w;
     float y_step = (p.tex_ey - p.tex_sy) / h;
 
-    for (float i = 0; i < h && (y + i) < m_height; i ++, out += m_width)
-        scan_line(p, out, w, p.tex_sx, p.tex_sy + (i * y_step), x_step);
+    const bool have_texture = m_state.texture && m_state.array_texcoord;
+
+
+#define SCAN(A, B, C) \
+    for (float i = 0; i < h && (y + i) < m_height; i ++, out += m_width) \
+        scan_line<A, B, C>(p, out, w, p.tex_sx, p.tex_sy + (i * y_step), x_step);
+
+    if (m_state.alphatest)
+        if (have_texture)
+            if (m_state.blend)    SCAN(1, 1, 1)
+            else                  SCAN(1, 1, 0)
+        else
+            if (m_state.blend)    SCAN(1, 0, 1)
+            else                  SCAN(1, 0, 0)
+    else
+        if (have_texture)
+            if (m_state.blend)    SCAN(0, 1, 1)
+            else                  SCAN(0, 1, 0)
+        else
+            if (m_state.blend)    SCAN(0, 0, 1)
+            else                  SCAN(0, 0, 0)
 }
 
 
