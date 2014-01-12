@@ -86,6 +86,8 @@ public:
                    float u, float v, float step);
 
     void draw_rect(const GLWPrim& p);
+    void draw_line(const GLWPrim& p);
+
 
     unsigned int *m_pixels;
     unsigned int m_width;

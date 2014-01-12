@@ -280,6 +280,50 @@ void FBStateManager::draw_rect(const GLWPrim& p)
             else                  SCAN(0, 0, 0)
 }
 
+void FBStateManager::draw_line(const GLWPrim& p)
+{
+    unsigned int x1 = p.pos_sx * m_scale.x + m_trans.x;
+    unsigned int x2 = p.pos_ex * m_scale.x + m_trans.x;
+    unsigned int y1 = p.pos_sy * m_scale.y + m_trans.y;
+    unsigned int y2 = p.pos_ey * m_scale.y + m_trans.y;
+    
+    if ((x1 != x2) && (y1 != y2))
+    {
+        printf("Not straight line.\n");
+        return;
+    }
+
+    if (m_state.texture && m_state.array_texcoord)
+    {
+        printf("Textured line.\n");
+        return;
+    }
+
+    unsigned int env_colour = get_reversed_colour(m_state.array_colour ? p.col_s
+                                                                       : m_state.colour);
+
+    if (x1 != x2)
+    {
+        if (x1 > x2)
+            std::swap(x1, x2);
+
+        if (y1 < m_height)
+            for (int i = x1; i < x2 && i < m_width; i ++)
+                m_pixels[(y1 * m_width) + i] = env_colour;
+    }
+    else if (y1 != y2)
+    {
+        if (y1 > y2)
+            std::swap(y1, y2);
+            
+        if (x1 < m_width)
+            for (int i = y1; i != y2 && i < m_height; i ++)
+                m_pixels[(i * m_width) + x1] = env_colour;
+    }
+    else /* Just a dot */
+        if (x1 < m_width && y1 < m_height)
+            m_pixels[(y1 * m_width) + x1] = env_colour;
+}
 
 /////////////////////////////////////////////////////////////////////////////
 // FBShapeBuffer
@@ -318,16 +362,11 @@ void FBShapeBuffer::draw(const GLState &state)
     FBStateManager* fbm = (FBStateManager*)glmanager;
     
     if (m_prim_type == GLW_RECTANGLE)
-    {
         for (auto p = m_primitives.begin(); p != m_primitives.end(); p ++)
-        {
             fbm->draw_rect(*p);
-        }
-    }
-
-//    float pos_sx, pos_sy, pos_ex, pos_ey, pos_z;
-//    float tex_sx, tex_sy, tex_ex, tex_ey;
-//    VColour col_s, col_e;
+    else if (m_prim_type == GLW_LINES)
+        for (auto p = m_primitives.begin(); p != m_primitives.end(); p ++)
+            fbm->draw_line(*p);
 }
 
 void FBShapeBuffer::clear()
