@@ -96,7 +96,7 @@ endif
 
 all: $(TARGET)
 
-$(TARGET): generate $(OBJECTS)
+$(TARGET): $(OBJECTS)
 	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
 
 generate:
@@ -106,6 +106,9 @@ generate:
 	cd source && ./util/cmd-name.pl
 	cd source && ./util/gen_ver.pl build.h
 	cd source && ./util/gen-cflg.pl compflag.h "$(CPPFLAGS) $(CXXFLAGS)" "$(LDFLAGS)" "libretro" "retro"
+	$(MAKE) -C source/rltiles all TILES=1
+	cp source/rltiles/*.png source/dat/tiles
+	cp source/contrib/fonts/*.ttf source/dat
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)
