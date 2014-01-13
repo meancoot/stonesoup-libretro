@@ -15,6 +15,7 @@
 #include "windowmanager.h"
 
 WindowManager *wm = NULL;
+extern void retro_return(bool flip);
 
 static int _translate_keysym(enum retro_key sym, enum retro_mod mods, uint32_t unicode)
 {
@@ -161,16 +162,6 @@ static int _translate_keysym(enum retro_key sym, enum retro_mod mods, uint32_t u
     return (unicode < 127) ? (unicode & 0x7F) + key_offset : unicode;
 }
 
-
-
-void retro_return_2(bool flip)
-{
-   extern void retro_return(bool);
-   retro_return(flip);
-
-   glmanager->reset_view_for_resize(coord_def(1024, 768));
-}
-
 void WindowManager::create()
 {
     if (wm)
@@ -193,7 +184,8 @@ int RetroWrapper::desktop_width() const                   { return 1024; }
 int RetroWrapper::desktop_height() const                  { return 768;  }
 void RetroWrapper::set_window_title(const char *title)    { }
 bool RetroWrapper::set_window_icon(const char* icon_name) { return true; }
-void RetroWrapper::set_mod_state(key_mod mod)             { /* NOT NEEDED */ }
+void RetroWrapper::set_mod_state(key_mod mod)             { /* (EMPTY) Functionality not needed */ }
+void RetroWrapper::delay(unsigned int ms)                 { /* (EMPTY) Never called */ }
 
 int RetroWrapper::init(coord_def *m_windowsz)
 {
@@ -219,15 +211,9 @@ void RetroWrapper::resize(coord_def &m_windowsz)
     glmanager->reset_view_for_resize(m_windowsz);
 }
 
-unsigned int RetroWrapper::get_ticks() const
-{
-    // TODO
-    static int t = 0;
-    return t+=10;
-}
-
 key_mod RetroWrapper::get_mod_state() const
 {
+    // (EMPTY) Never called
     return (key_mod)0;
 }
 
@@ -235,33 +221,37 @@ key_mod RetroWrapper::get_mod_state() const
 int RetroWrapper::wait_event(wm_event *event)
 {
     while (queue.empty())
-        retro_return_2(false);
+        retro_return(false);
     
     *event = queue.front();    
     queue.pop_front();
     return 1;
 }
 
+unsigned int RetroWrapper::get_ticks() const
+{
+    // TODO: Needed for tooltips
+    static int t = 0;
+    return t+=10;
+}
+
 void RetroWrapper::set_timer(unsigned int interval, wm_timer_callback callback)
 {
-    // (EMPTY) TODO: Needed for tooltips?
+    // (EMPTY) TODO: Needed for tooltips
 }
 
 int RetroWrapper::raise_custom_event()
 {
-    // (EMPTY) TODO: Needed for tooltips?
+    // (EMPTY) TODO: Needed for tooltips
     return 0;
 }
 
 void RetroWrapper::swap_buffers()
 {
-   retro_return_2(true);
+   retro_return(true);
 }
 
-void RetroWrapper::delay(unsigned int ms)
-{
-    // TODO
-}
+
 
 unsigned int RetroWrapper::get_event_count(wm_event_type type)
 {

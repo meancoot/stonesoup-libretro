@@ -145,7 +145,7 @@ void retro_run (void)
     co_switch(game_thread);
     
     if (fbmanager && fbmanager->m_pixels)
-        video_cb(fbmanager->m_pixels, fbmanager->m_width, fbmanager->m_height, 1024 * 4);
+        video_cb(have_frame ? fbmanager->m_pixels : 0, fbmanager->m_width, fbmanager->m_height, 1024 * 4);
     else
         video_cb(0, 1024, 768, 1024 * 4);
 }
