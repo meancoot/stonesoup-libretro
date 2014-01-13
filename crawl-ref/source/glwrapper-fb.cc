@@ -29,15 +29,6 @@ static unsigned int modulate(unsigned int c, unsigned int m)
 
 static unsigned int blend(unsigned int c, unsigned int m)
 {
-    static bool alpha_init;
-    static float alpha_table[256][256];
-
-    if (!alpha_init)
-        for (int i = 0; i != 256; i ++)
-            for (int j = 0; j != 256; j ++)
-                alpha_table[i][j] = (i / 255.0f) * (j / 255.0f);
-    alpha_init = true;
-
     if ((c & 0xFF000000UL) == 0xFF00000000UL)
         return c;
     else if ((c & 0xFF000000UL) == 0)
@@ -52,10 +43,10 @@ static unsigned int blend(unsigned int c, unsigned int m)
     unsigned int result = 0;
     for (int i = 0; i != 3; i ++)
     {
-        float src_c = alpha_table[BYTEOF(c, i)][src_a];
-        float dst_c = alpha_table[BYTEOF(m, i)][dst_a];
+        unsigned int src_c = BYTEOF(c, i) * src_a;
+        unsigned int dst_c = BYTEOF(m, i) * dst_a;
     
-        SETBYTEOF(result, i, (unsigned char)((src_c + dst_c) * 255));
+        SETBYTEOF(result, i, (src_c + dst_c) >> 8);
     }
 
     return result;
