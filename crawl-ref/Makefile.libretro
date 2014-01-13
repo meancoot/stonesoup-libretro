@@ -104,6 +104,7 @@ generate:
 	cd source && ./util/art-data.pl
 	cd source && ./util/gen-mi-enum
 	cd source && ./util/cmd-name.pl
+	cd source && ./util/gen-luatags.pl
 	cd source && ./util/gen_ver.pl build.h
 	cd source && ./util/gen-cflg.pl compflag.h "$(CPPFLAGS) $(CXXFLAGS)" "$(LDFLAGS)" "libretro" "retro"
 	$(MAKE) -C source/rltiles all TILES=1
