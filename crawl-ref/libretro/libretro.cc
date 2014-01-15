@@ -136,12 +136,91 @@ bool retro_load_game(const struct retro_game_info *game)
     return true;
 }
 
+struct touch_detail
+{
+    bool pressed;
+    int x;
+    int y;
+    
+    touch_detail() : pressed(false), x(0), y(0) { }
+    
+    touch_detail(int index)
+    {
+        pressed = input_cb(0, RETRO_DEVICE_POINTER, index, RETRO_DEVICE_ID_POINTER_PRESSED);
+        x = input_cb(0, RETRO_DEVICE_POINTER, index, RETRO_DEVICE_ID_POINTER_X) + 32768;
+        y = input_cb(0, RETRO_DEVICE_POINTER, index, RETRO_DEVICE_ID_POINTER_Y) + 32768;
+        
+        x = (x * 1024) >> 16;
+        y = (y * 768 ) >> 16;
+    }
+    
+    operator void*() { return pressed ? this : 0; }
+};
+
+void process_touches()
+{
+    static bool down;
+    static unsigned int touch_stamp;
+    static unsigned int double_timeout;
+    static touch_detail last_touch;
+    
+    
+    // PREMOVE is used to set the mouse move event twice.
+    // Doing this helps ensure the help messages are updated.
+    enum touch_state_t { NONE, PREMOVE, MOVED, WAIT, CLICK };
+    static touch_state_t state = NONE;
+    
+    touch_stamp ++;
+    
+    touch_detail touch1(0);
+    touch_detail touch2(1);
+    bool pressed = touch1 && !touch2;
+    
+    if (state == NONE || state == PREMOVE)
+    {
+        if (pressed)
+        {
+            state = (state == NONE) ? PREMOVE : MOVED;
+            double_timeout = touch_stamp + 30;
+            retrowm->push_mouse_movement(touch1.x, touch1.y);
+            last_touch = touch1;
+        }
+    }
+    else if (state == MOVED)
+    {
+        if (touch_stamp > double_timeout)
+            state = NONE;
+        else if (!pressed)
+            state = WAIT;
+    }
+    else if (state == WAIT)
+    {
+        if (touch_stamp > double_timeout)
+            state = NONE;
+        else if (pressed)
+        {
+            state = CLICK;
+            retrowm->push_mouse_button(0, true, last_touch.x, last_touch.y);        
+        }
+    }
+    else if (state == CLICK)
+    {
+        if (!pressed)
+        {
+            retrowm->push_mouse_button(0, false, last_touch.x, last_touch.y);
+            state = NONE;
+        }
+    }
+}
+
 void retro_run (void)
 {
     retrowm = wm ? (RetroWrapper*)wm : 0;
     fbmanager = glmanager ? (FBStateManager*)glmanager : 0;
 
     poll_cb();
+    process_touches();
+    
     co_switch(game_thread);
     
     if (fbmanager && fbmanager->m_pixels)
