@@ -32,25 +32,17 @@ void main_wrap()
     strlcpy(content_dir, rc_path, PATH_MAX);
 
     char* slash = strrchr(content_dir, '/');
-    if (slash) *slash = '\0';
-
-#define MAKE_AND_BAKE(X) \
-    static char X[PATH_MAX]; snprintf(X, PATH_MAX, #X"=%s", content_dir);
-    
-    MAKE_AND_BAKE(crawl_dir);
-    MAKE_AND_BAKE(morgue_dir);
-    MAKE_AND_BAKE(save_dir);
-    MAKE_AND_BAKE(macro_dir);
+    if (slash) slash[1] = '\0';
 
     const char* argv[] = { "crawl", 
                            "-rc", rc_path,
-                           "--extra-opt-first", crawl_dir,
-                           "--extra-opt-first", morgue_dir,
-                           "--extra-opt-first", save_dir,
-                           "--extra-opt-first", macro_dir,                                                      
+                           "-dir", content_dir,
+                           "-rcdir", content_dir,
+                           "-morgue", content_dir,
+                           "-macro", content_dir,
                            0 };
 
-    ss_main(9, (char**)argv);
+    ss_main(11, (char**)argv);
     
     while (true)
     {
@@ -213,6 +205,8 @@ void process_touches()
     }
 }
 
+#include "../source/initfile.h"
+#include "../source/options.h"
 void retro_run (void)
 {
     retrowm = wm ? (RetroWrapper*)wm : 0;
