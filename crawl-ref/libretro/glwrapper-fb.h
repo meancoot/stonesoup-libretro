@@ -5,59 +5,7 @@
 #ifdef USE_FB
 
 #include "glwrapper.h"
-
-struct FBTexture
-{
-    unsigned int width;
-    unsigned int height;
-    unsigned int* pixels;
-
-    FBTexture() : width(0), height(0), pixels(0)
-    {
-    
-    }
-    
-    ~FBTexture()
-    {
-        delete[] pixels;
-    }
-    
-    void set_size(unsigned int width_, unsigned int height_)
-    {
-        if (width == width_ && height == height_)
-            return;
-    
-        width = width_;
-        height = height_;
-        
-        delete[] pixels;
-        pixels = new unsigned int[width * height];
-    }
-    
-    const unsigned int* get_pixel_ptr(float u, float v) const
-    {
-        if (!pixels) return 0;
-       
-        if (u < 0) u = 0;
-        if (u > 1) u = 1;
-        if (v < 0) v = 0;
-        if (v > 1) v = 1;
-        
-        unsigned int x = (float)width * u;
-        unsigned int y = (float)height * v;
-        
-        if (x == width) x -= 1;
-        if (y == height) y -= 1;
-
-        return &pixels[y * width + x];        
-    }
-    
-    unsigned int get_pixel(float u, float v) const
-    {
-        if (!pixels) return 0;
-        return *get_pixel_ptr(u, v);
-    }
-};
+#include "glwrapper-texture.h"
 
 #include "glwrapper.h"
 class FBStateManager : public GLStateManager

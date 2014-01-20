@@ -23,13 +23,13 @@ ifneq (,$(findstring unix,$(platform)))
    LDFLAGS += -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
 else ifneq (,$(findstring osx,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dylib
-   CPPFLAGS += -DUNIX
+   CPPFLAGS += -DUNIX -DUSE_RETROGL
    CXXFLAGS += -stdlib=libc++
-   LDFLAGS += -dynamiclib -stdlib=libc++
+   LDFLAGS += -dynamiclib -stdlib=libc++ -framework OpenGL
 else ifneq (,$(findstring ios,$(platform)))
    TARGET := $(TARGET_NAME)_libretro_ios.dylib
-   CPPFLAGS += -marm -DUNIX -stdlib=libc++ -DHAVE_POSIX_MEMALIGN -fPIC
-   LDFLAGS += -dynamiclib -marm -stdlib=libc++ -fPIC
+   CPPFLAGS += -marm -DUNIX -stdlib=libc++ -DHAVE_POSIX_MEMALIGN -fPIC -DUSE_RETROGL -DGLES
+   LDFLAGS += -dynamiclib -marm -stdlib=libc++ -fPIC -framework OpenGLES
    CC = clang -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
    CXX = clang++ -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0   
 else ifneq (,$(findstring win,$(platform)))
@@ -83,7 +83,7 @@ CPPFLAGS    += -DFT2_BUILD_LIBRARY -DDARWIN_NO_CARBON
 CPPFLAGS += -Isource/rltiles -Isource/contrib/lua/src -Isource/contrib/pcre -Isource
 CPPFLAGS += -Isource/contrib/libpng -Isource/contrib/zlib -Isource/contrib/freetype/include
 CPPFLAGS += -Isource/contrib/sqlite
-CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_FB -DUSE_FT
+CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_FT
 CPPFLAGS += -D__LIBRETRO__
 CPPFLAGS += -DPROPORTIONAL_FONT=\"DejaVuSans.ttf\" -DMONOSPACED_FONT=\"DejaVuSansMono.ttf\"
 CXXFLAGS += -std=c++11

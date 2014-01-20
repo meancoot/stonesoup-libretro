@@ -57,14 +57,6 @@ static unsigned int get_reversed_colour(const VColour& colour)
     return (colour.a << 24) | (colour.r << 16) | (colour.g << 8) | colour.b;
 }
 
-static unsigned int get_reversed_colour(unsigned int colour)
-{
-    unsigned int result = colour & 0xFF00FF00;
-    result |= (colour & 0xFF) << 16;
-    result |= (colour >> 16) & 0xFF;
-    return result;
-}
-
 /////////////////////////////////////////////////////////////////////////////
 // Static functions from GLStateManager
 
@@ -168,40 +160,11 @@ void FBStateManager::bind_texture(unsigned int texture)
 void FBStateManager::load_texture(unsigned char *pixels, unsigned int width,
                                    unsigned int height, MipMapOptions mip_opt,
                                    int xoffset, int yoffset)
-{   
-    const unsigned int* const px = (unsigned int*)pixels;
-        
-    if (xoffset < 0 || yoffset < 0)
-    {
-        m_texture->set_size(width, height);
-        
-        if (pixels)
-            for (unsigned i = 0; i != width * height; i ++)
-                m_texture->pixels[i] = get_reversed_colour(px[i]);
-        else
-            memset(m_texture->pixels, 0, width * height * 4);
-    }
-    else
-    {
-        if (m_texture->pixels == 0)
-            abort();
-    
-        for (unsigned int i = 0; i != height; i ++)
-        {
-            auto ty = yoffset + i;
-            if (ty >= m_texture->height)
-                break;
-                
-            for (unsigned int j = 0; j != width; j ++)
-            {
-                auto tx = xoffset + j;
-                if (tx >= m_texture->width)
-                    break;
-                    
-                m_texture->pixels[ty * m_texture->width + tx] = get_reversed_colour(px[i * width + j]);
-            }
-        }
-    }
+{
+    if (m_texture)
+        m_texture->load_pixels((unsigned int*)pixels,
+                                width, height, xoffset, yoffset);
+
 }
 
 void FBStateManager::reset_view_for_redraw(float x, float y)

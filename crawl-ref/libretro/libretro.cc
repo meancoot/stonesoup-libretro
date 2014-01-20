@@ -5,13 +5,30 @@
 
 #include "../source/AppHdr.h"
 #include "../source/windowmanager-retro.h"
-#include "../source/glwrapper-fb.h"
+#include "glwrapper-fb.h"
+#include "glwrapper-retrogl.h"
 
 extern WindowManager *wm;
 static RetroWrapper *retrowm;
 
 extern GLStateManager *glmanager;
-static FBStateManager *fbmanager;
+
+#ifdef USE_FB
+#define RETROGLSTATEMANAGER FBStateManager
+static RETROGLSTATEMANAGER *retromanager;
+#else
+#define RETROGLSTATEMANAGER RetroGLStateManager
+static RETROGLSTATEMANAGER *retromanager;
+
+static struct retro_hw_render_callback render_iface;
+
+static void core_gl_context_reset()
+{
+    if (retromanager)
+        retromanager->context_reset();
+}
+
+#endif
 
 static cothread_t main_thread;
 static cothread_t game_thread;
@@ -53,10 +70,6 @@ void main_wrap()
             
         co_switch(main_thread);
     }
-}
-
-static void core_gl_context_reset()
-{
 }
 
 static bool have_frame;
@@ -120,11 +133,38 @@ void retro_deinit(void)
 }
 
 bool retro_load_game(const struct retro_game_info *game)
-{    
+{
+#ifndef USE_FB
+    memset(&render_iface, 0, sizeof(render_iface));
+#ifndef GLES
+    render_iface.context_type = RETRO_HW_CONTEXT_OPENGL;
+#else
+    render_iface.context_type = RETRO_HW_CONTEXT_OPENGLES2;
+#endif
+    render_iface.context_reset = core_gl_context_reset;
+    render_iface.depth = true;
+    render_iface.bottom_left_origin = false;
+    render_iface.cache_context = true;
+    
+    if (!environ_cb(RETRO_ENVIRONMENT_SET_HW_RENDER, &render_iface))
+    {
+       log_cb(RETRO_LOG_ERROR, "stonesoup: libretro frontend doesn't have OpenGL support.");
+       return false;
+    }
+#endif
+
     strlcpy(rc_path, game->path, PATH_MAX);
 
     main_thread = co_active();
     game_thread = co_create(65536 * sizeof(void*) * 16, main_wrap);
+
+    WindowManager::create();
+    GLStateManager::init();
+    
+    retrowm = (RetroWrapper*)wm;
+    retromanager = (RETROGLSTATEMANAGER*)glmanager;
+    
+    
     return true;
 }
 
@@ -205,22 +245,25 @@ void process_touches()
     }
 }
 
-#include "../source/initfile.h"
-#include "../source/options.h"
 void retro_run (void)
 {
-    retrowm = wm ? (RetroWrapper*)wm : 0;
-    fbmanager = glmanager ? (FBStateManager*)glmanager : 0;
-
     poll_cb();
     process_touches();
     
+#ifdef USE_FB    
     co_switch(game_thread);
     
-    if (fbmanager && fbmanager->m_pixels)
-        video_cb(have_frame ? fbmanager->m_pixels : 0, fbmanager->m_width, fbmanager->m_height, 1024 * 4);
+    if (retromanager->m_pixels)
+        video_cb(have_frame ? retromanager->m_pixels : 0, retromanager->m_width,
+                 retromanager->m_height, 1024 * 4);
     else
         video_cb(0, 1024, 768, 1024 * 4);
+#else
+    retromanager->enter_frame(render_iface.get_current_framebuffer());
+    co_switch(game_thread);
+    retromanager->exit_frame();
+    video_cb(have_frame ? RETRO_HW_FRAME_BUFFER_VALID : 0, 1024, 768, 0);
+#endif
 }
 
 // Stubs
