@@ -67,6 +67,8 @@ map.dump
 mapgen.log
 *.out
 *.stat
+fsim.txt
+fsim.csv
 webtiles.log
 debuglog.txt
 dolls.txt

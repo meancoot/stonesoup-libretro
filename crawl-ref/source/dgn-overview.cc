@@ -265,6 +265,9 @@ static string _get_seen_branches(bool display)
     {
         const branch_type branch = branches[i].id;
 
+        if (branch == BRANCH_ZIGGURAT)
+            continue;
+
         if (branch == root_branch
             || stair_level.count(branch))
         {
@@ -423,6 +426,7 @@ static string _print_altars_for_gods(const vector<god_type>& gods,
     char buffer[100];
     int num_printed = 0;
     char const *colour;
+    const int columns = 4;
 
     for (unsigned int cur_god = 0; cur_god < gods.size(); cur_god++)
     {
@@ -444,7 +448,7 @@ static string _print_altars_for_gods(const vector<god_type>& gods,
         if (!display)
         {
             if (has_altar_been_seen)
-                disp += god_name(god, false) + "\n";
+                disp += uppercase_first(god_name(god, false)) + "\n";
             continue;
         }
 
@@ -469,27 +473,26 @@ static string _print_altars_for_gods(const vector<god_type>& gods,
             colour = "darkgrey";
 
         snprintf(buffer, sizeof buffer, "<%s>%s</%s>",
-                 colour, god_name(god, false).c_str(), colour);
+                 colour, uppercase_first(god_name(god, false)).c_str(), colour);
         disp += buffer;
         num_printed++;
 
-        if (num_printed % 5 == 0)
+        if (num_printed % columns == 0)
             disp += "\n";
         else
-            // manually aligning the god columns: five whitespaces between columns
-            switch (num_printed % 5)
+            // manually aligning the god columns: ten spaces between columns
+            switch (num_printed % columns)
             {
-            case 1: disp += string(14 - strwidth(god_name(god, false)), ' ');
+            case 1: disp += string(19 - strwidth(god_name(god, false)), ' ');
                     break;
-            case 2: disp += string(18 - strwidth(god_name(god, false)), ' ');
+            case 2: disp += string(23 - strwidth(god_name(god, false)), ' ');
                     break;
-            case 3: disp += string(16 - strwidth(god_name(god, false)), ' ');
+            case 3: disp += string(20 - strwidth(god_name(god, false)), ' ');
                     break;
-            case 4: disp += string(13 - strwidth(god_name(god, false)), ' ');
             }
     }
 
-    if (num_printed > 0 && num_printed % 5 != 0)
+    if (num_printed > 0 && num_printed % columns != 0)
         disp += "\n";
     return disp;
 }

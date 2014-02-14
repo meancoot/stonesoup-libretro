@@ -21,6 +21,7 @@
 #include "art-enum.h"
 #include "artefact.h"
 #include "beam.h"
+#include "colour.h"
 #include "coord.h"
 #include "coordit.h"
 #include "dactions.h"
@@ -67,6 +68,7 @@
 #include "travel.h"
 #include "hints.h"
 #include "unwind.h"
+#include "view.h"
 #include "viewchar.h"
 #include "xom.h"
 
@@ -1265,8 +1267,14 @@ void pickup(bool partial_quantity)
         // a killed item here.
         pickup_single_item(o, partial_quantity ? 0 : mitm[o].quantity);
     }
-    else if (Options.pickup_menu)
+    else if (Options.pickup_menu
+             || Options.pickup_menu_limit
+                && num_nonsquelched >= (Options.pickup_menu_limit < 0
+                                        ? Options.item_stack_summary_minimum
+                                        : Options.pickup_menu_limit))
+    {
         pickup_menu(o);
+    }
     else
     {
         int next;
@@ -1608,6 +1616,7 @@ int move_item_to_player(int obj, int quant_got, bool quiet,
         if (!quiet)
         {
             _fish(it);
+            flash_view_delay(rune_colour(it.plus), 300);
             mprf("You pick up the %s rune and feel its power.",
                  rune_type_name(it.plus));
             int nrunes = runes_in_pack();
@@ -1783,6 +1792,7 @@ int move_item_to_player(int obj, int quant_got, bool quiet,
     item.flags &= ~(ISFLAG_DROPPED_BY_ALLY | ISFLAG_UNOBTAINABLE);
 
     god_id_item(item);
+    maybe_identify_base_type(item);
     if (item.base_type == OBJ_BOOKS)
         maybe_id_book(item, true);
 
@@ -1884,7 +1894,10 @@ bool move_item_to_grid(int *const obj, const coord_def& p, bool silent)
     }
 
     if (you.see_cell(p))
+    {
         god_id_item(item);
+        maybe_identify_base_type(item);
+    }
 
     // If it's a stackable type...
     if (is_stackable_item(item))
@@ -2231,11 +2244,7 @@ void drop_last()
 
 static string _drop_menu_title(const Menu *menu, const string &oldt)
 {
-    string res = _menu_burden_invstatus(menu) + " " + oldt;
-    if (menu->is_set(MF_SINGLESELECT))
-        res = "[Single drop] " + res;
-
-    return res;
+    return _menu_burden_invstatus(menu) + " " + oldt;
 }
 
 int get_equip_slot(const item_def *item)
@@ -2601,8 +2610,8 @@ typedef bool (*item_comparer)(const item_def& pickup_item,
 static bool _identical_types(const item_def& pickup_item,
                              const item_def& inv_item)
 {
-    return (pickup_item.base_type == inv_item.base_type)
-           && (pickup_item.sub_type == inv_item.sub_type);
+    return pickup_item.base_type == inv_item.base_type
+           && pickup_item.sub_type == inv_item.sub_type;
 }
 
 static bool _edible_food(const item_def& pickup_item,
@@ -3212,6 +3221,7 @@ bool item_def::is_greedy_sacrificeable() const
     if (you_worship(GOD_NEMELEX_XOBEH)
         && !check_nemelex_sacrificing_item_type(*this)
         || flags & (ISFLAG_DROPPED | ISFLAG_THROWN)
+        || item_needs_autopickup(*this)
         || item_is_stationary(*this))
     {
         return false;
@@ -4152,6 +4162,8 @@ void corrode_item(item_def &item, actor *holder)
         if (you.equip[EQ_WEAPON] == item.link)
             you.wield_change = true;
     }
+    else if (holder && holder->type == MONS_PLAYER_SHADOW)
+        return; // it's just a temp copy of the item
     else if (holder && you.see_cell(holder->pos()))
     {
         if (holder->type == MONS_DANCING_WEAPON)
@@ -4173,4 +4185,80 @@ void corrode_item(item_def &item, actor *holder)
         item.plus2 = how_rusty;
     else
         item.plus  = how_rusty;
+}
+
+// If there is only one unidentified subtype left in the item's object type,
+// automatically identify it.
+bool maybe_identify_base_type(item_def &item)
+{
+    if (is_artefact(item))
+        return false;
+    if (get_ident_type(item) == ID_KNOWN_TYPE)
+        return false;
+
+    int item_count; // Number of objects in an enum
+    bool is_amulet = false;
+
+    switch (item.base_type)
+    {
+        case OBJ_WANDS:
+            item_count = NUM_WANDS; break;
+        case OBJ_STAVES:
+            item_count = NUM_STAVES; break;
+        case OBJ_POTIONS:
+            item_count = NUM_POTIONS; break;
+        case OBJ_SCROLLS:
+            item_count = NUM_SCROLLS; break;
+        case OBJ_JEWELLERY:
+            if (item.sub_type >= RING_FIRST_RING && item.sub_type < NUM_RINGS)
+                item_count = NUM_RINGS;
+            else
+            {
+                item_count = NUM_JEWELLERY - AMU_FIRST_AMULET;
+                is_amulet = true;
+            }
+            break;
+
+        default:
+            return false;
+    }
+
+    int ident_count = 0;
+
+    for (int i = (is_amulet ? AMU_FIRST_AMULET : 0);
+         i < item_count + (is_amulet ? AMU_FIRST_AMULET : 0);
+         i++)
+    {
+        bool identified = you.type_ids[item.base_type][i] == ID_KNOWN_TYPE;
+        ident_count += identified ? 1 : 0;
+    }
+
+    if (ident_count == item_count - 1)
+    {
+        if (!in_inventory(item) && item_needs_autopickup(item)
+            && (item.base_type == OBJ_STAVES
+                || item.base_type == OBJ_JEWELLERY))
+        {
+            item.props["needs_autopickup"] = true;
+        }
+
+        set_ident_type(item, ID_KNOWN_TYPE);
+
+        if (item.props.exists("needs_autopickup") && is_useless_item(item))
+            item.props.erase("needs_autopickup");
+
+        string class_name;
+        if (item.base_type == OBJ_JEWELLERY)
+            class_name = is_amulet ? "amulet" : "ring";
+        else
+            class_name = item_class_name(item.base_type, true);
+
+        mprf("You have identified the last %s.", class_name.c_str());
+        if (in_inventory(item))
+            mprf_nocap("%s", item.name(DESC_INVENTORY_EQUIP).c_str());
+
+        return true;
+    }
+
+    return false;
 }

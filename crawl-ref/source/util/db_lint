@@ -185,7 +185,7 @@ my @monspeak_at_at = at_at_replaces("mon-util.cc", "do_mon_str_replacements");
 
 my @gods = ("the Shining One", "Sif Muna","Nemelex Xobeh",
             qw(Zin Kikubaaqudgha Yredelemnul Xom Vehumet
-               Okawaru Makhleb Trog Elyvilon Lugonu
+               Okawaru Makhleb Trog Elyvilon Lugonu Dithmengos
                Beogh Jiyva Fedhas Cheibriados Ashenzari));
 
 sub godspeak_keys()
@@ -211,9 +211,13 @@ sub godspeak_keys()
 }
 __________________________________________________________________________();
 read_file("descript/unident");
-read_file("descript/gods");
 read_file("descript/skills");
 read_file("descript/commands");
+
+if (read_file("descript/gods"))
+{
+    check_desc_needed("god", map {($_, "$_ powers")} @gods);
+}
 
 if (read_file("descript/items"))
 {

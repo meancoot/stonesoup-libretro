@@ -924,29 +924,6 @@ static void _place_player_on_stair(branch_type old_branch,
     you.moveto(dgn_find_nearby_stair(stair_type, dest_pos, find_first));
 }
 
-static void _close_level_gates()
-{
-    for (rectangle_iterator ri(0); ri; ++ri)
-    {
-        switch (grd(*ri))
-        {
-        case DNGN_ENTER_ABYSS:
-        case DNGN_ENTER_COCYTUS:
-        case DNGN_ENTER_DIS:
-        case DNGN_ENTER_GEHENNA:
-        case DNGN_ENTER_TARTARUS:
-        case DNGN_ENTER_PANDEMONIUM:
-        case DNGN_ENTER_LABYRINTH:
-#if TAG_MAJOR_VERSION == 34
-        case DNGN_ENTER_PORTAL_VAULT:
-#endif
-            remove_markers_and_listeners_at(*ri);
-            grd(*ri) = DNGN_STONE_ARCH;
-        default: ;
-        }
-    }
-}
-
 static void _clear_env_map()
 {
     env.map_knowledge.init(map_cell());
@@ -1326,11 +1303,6 @@ bool load_level(dungeon_feature_type stair_taken, load_mode_type load_mode,
     env.final_effects.clear();
     los_changed();
 
-    // Closes all the gates if you're on the way out.
-    // Before marker activation since it removes some.
-    if (make_changes && you.char_direction == GDT_ASCENDING)
-        _close_level_gates();
-
     // Markers must be activated early, since they may rely on
     // events issued later, e.g. DET_ENTERING_LEVEL or
     // the DET_TURN_ELAPSED from update_level.
@@ -1619,6 +1591,9 @@ static void _save_game_exit()
 #ifdef DGL_WHEREIS
     whereis_record("saved");
 #endif
+#ifdef USE_TILE_WEB
+    tiles.send_exit_reason("saved");
+#endif
 
     delete you.save;
     you.save = 0;
@@ -1628,11 +1603,19 @@ void save_game(bool leave_game, const char *farewellmsg)
 {
     unwind_bool saving_game(crawl_state.saving_game, true);
 
-    if (leave_game && Options.dump_on_save && !dump_char(you.your_name, true))
+
+    if (leave_game && Options.dump_on_save)
     {
-        mpr("Char dump unsuccessful! Sorry about that.");
-        if (!crawl_state.seen_hups)
-            more();
+        if (!dump_char(you.your_name, true))
+        {
+            mpr("Char dump unsuccessful! Sorry about that.");
+            if (!crawl_state.seen_hups)
+                more();
+        }
+#ifdef USE_TILE_WEB
+        else
+            tiles.send_dump_info("save", you.your_name);
+#endif
     }
 
     // Stack allocated string's go in separate function,

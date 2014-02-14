@@ -110,6 +110,8 @@ demon blade "Leech"
 
 It drives its owner's mind into a narrow purpose: gorging on drained life
 force.
+
+It is unerringly vampiric.
 %%%%
 dagger of Chilly Death
 
@@ -185,10 +187,10 @@ Elemental Staff
 
 This powerful staff used to belong to the leader of the Guild of Five Elements.
 %%%%
-# TAG_MAJOR_VERSION == 34
 crossbow "Sniper"
 
-A crossbow made of some black material.
+A crossbow made of some black material. It is highly damaging but extremely
+cumbersome to load.
 %%%%
 longbow "Piercer"
 
@@ -231,13 +233,14 @@ one remaining.
 whip "Snakebite"
 
 A double-ended whip made from the cured hides of the Lair of Beasts' deadly
-black mambas.
+black mambas, and enchanted with a range of deadly toxins.
 %%%%
 # TAG_MAJOR_VERSION == 34
 knife of Accuracy
 
 It is almost unerringly accurate.
 %%%%
+# TAG_MAJOR_VERSION == 34
 Lehudib's crystal spear
 
 Presumably this relic led to the invention of the famous spell, or maybe the
@@ -267,6 +270,7 @@ cloak of the Thief
 It allows its wearer to excel in the arts of thievery, and can be evoked to
 release thick clouds of smoke to allow for a hasty escape.
 %%%%
+# TAG_MAJOR_VERSION == 34
 large shield "Bullseye"
 
 Just in case you had trouble getting hit.
@@ -372,7 +376,7 @@ shield of the gong
 This is a large bronze gong that can be worn as a shield. According to certain
 mystics, beating on such a gong can grant you spiritual protection.
 
-And this shield surely will be heard!
+And this shield will surely be heard!
 %%%%
 amulet of the Air
 
@@ -513,6 +517,17 @@ A relic of some ancient wizarding war. Centuries later, it still crackles with
 effects from the residual hexes and magical energies it was once subjected to
 on a daily basis; spellcasters able to get a handle on its power, however, will
 find it enhances their spell power.
+%%%%
+arc blade
+
+A cutlass somehow crafted from pure electricity. Striking an enemy with it
+occasionally unleashes a static discharge.
+%%%%
+demon whip "Spellbinder"
+
+A weapon said to have once been used to keep unruly imprisoned wizards in
+line; it violently disrupts their ability to use magic, inflicting wild and
+unpredictable residual magical effects on those it strikes.
 %%%%
 milk chocolate
 

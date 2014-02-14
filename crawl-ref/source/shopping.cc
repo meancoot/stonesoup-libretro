@@ -1513,19 +1513,6 @@ unsigned int item_value(item_def item, bool ident)
             valued /= 10;
         }
 
-        if (get_equip_race(item) == ISFLAG_ELVEN
-            || get_equip_race(item) == ISFLAG_DWARVEN)
-        {
-            valued *= 12;
-            valued /= 10;
-        }
-
-        if (get_equip_race(item) == ISFLAG_ORCISH)
-        {
-            valued *= 8;
-            valued /= 10;
-        }
-
         if (item_ident(item, ISFLAG_KNOW_PLUSES))
         {
             if (item.plus >= 0)
@@ -1626,8 +1613,10 @@ unsigned int item_value(item_def item, bool ident)
             break;
 
         case ARM_HELMET:
+#if TAG_MAJOR_VERSION == 34
         case ARM_CAP:
-        case ARM_WIZARD_HAT:
+#endif
+        case ARM_HAT:
         case ARM_BUCKLER:
             valued += 25;
             break;
@@ -2289,7 +2278,7 @@ bool is_worthless_consumable(const item_def &item)
             return false;
         }
     case OBJ_FOOD:
-        return (item.sub_type == FOOD_CHUNK) && food_is_rotten(item);
+        return item.sub_type == FOOD_CHUNK && food_is_rotten(item);
     case OBJ_SCROLLS:
         switch (item.sub_type)
         {

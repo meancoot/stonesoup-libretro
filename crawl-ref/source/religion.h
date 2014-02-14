@@ -50,7 +50,7 @@ void gain_piety(int pgn, int denominator = 1,
 void dock_piety(int pietyloss, int penance);
 void god_speaks(god_type god, const char *mesg);
 void lose_piety(int pgn);
-void handle_god_time(void);
+void handle_god_time(int time_delta);
 int god_colour(god_type god);
 colour_t god_message_altar_colour(god_type god);
 bool player_can_join_god(god_type which_god);
@@ -78,6 +78,7 @@ bool god_can_protect_from_harm(god_type god);
 int elyvilon_lifesaving();
 bool god_protects_from_harm();
 bool jiyva_is_dead();
+void set_penance_xp_timeout();
 bool fedhas_protects(const monster* target);
 bool fedhas_neutralises(const monster* target);
 void print_sacrifice_message(god_type, const item_def &,

@@ -74,6 +74,12 @@ enum tag_minor_version
     TAG_MINOR_ABIL_1000,           // Start god ability enums at 1000.
     TAG_MINOR_CLASS_HP_0,          // Base class maxhp at 0.
     TAG_MINOR_NOISES,              // Save incompat recovery wrt ATTR_NOISES.
+    TAG_MINOR_ABIL_GOD_FIXUP,      // Movement of some non-god-specific abils.
+    TAG_MINOR_NEMELEX_DUNGEONS,    // Make nemelex not give/track decks of dungeons.
+    TAG_MINOR_DEMONSPAWN,          // Save compat wrt demonspawn enemies.
+    TAG_MINOR_EVENT_TIMERS,        // "Every 20 turn" effects are less determinstic.
+    TAG_MINOR_EVENT_TIMER_FIX,     // Correct event timers in transferred games
+    TAG_MINOR_MONINFO_ENERGY,      // Energy usage in monster_info
 #endif
     NUM_TAG_MINORS,
     TAG_MINOR_VERSION = NUM_TAG_MINORS - 1

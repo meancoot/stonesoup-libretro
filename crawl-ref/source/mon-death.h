@@ -19,6 +19,10 @@ void elven_twins_unpacify(monster* twin);
 bool mons_is_kirke(monster* mons);
 void hogs_to_humans();
 
+bool mons_is_natasha(const monster* mons);
+bool mons_felid_can_revive(const monster* mons);
+void mons_felid_revive(monster* mons);
+
 bool mons_is_phoenix(const monster* mons);
 void phoenix_died(monster* mons);
 void timeout_phoenix_markers(int duration);

@@ -125,7 +125,7 @@ private:
     /* Brand / Attack Effects */
     // Returns true if the defender is banished.
     bool distortion_affects_defender();
-    void antimagic_affects_defender();
+    void antimagic_affects_defender(int pow);
     void pain_affects_defender();
     void chaos_affects_defender();
     void chaos_affects_attacker();
@@ -151,6 +151,7 @@ private:
     void mons_do_poison();
     void mons_do_napalm();
     void mons_do_eyeball_confusion();
+    void apply_black_mark_effects();
 
     attack_flavour random_chaos_attack_flavour();
 private:

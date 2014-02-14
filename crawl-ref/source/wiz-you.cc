@@ -584,7 +584,7 @@ bool wizard_add_mutation()
     const bool god_gift = (answer == 1);
 
     msgwin_get_line("Which mutation (name, 'good', 'bad', 'any', "
-                    "'xom', 'slime')? ",
+                    "'xom', 'slime', 'corrupt')? ",
                     specs, sizeof(specs));
 
     if (specs[0] == '\0')
@@ -604,6 +604,8 @@ bool wizard_add_mutation()
         mutat = RANDOM_XOM_MUTATION;
     else if (spec == "slime")
         mutat = RANDOM_SLIME_MUTATION;
+    else if (spec == "corrupt")
+        mutat = RANDOM_CORRUPT_MUTATION;
 
     if (mutat != NUM_MUTATIONS)
     {
@@ -840,7 +842,9 @@ static const char* dur_names[] =
     "weak",
     "dimension anchor",
     "antimagic",
+#if TAG_MAJOR_VERSION == 34
     "spirit howl",
+#endif
     "infused",
     "song of slaying",
 #if TAG_MAJOR_VERSION == 34
@@ -857,6 +861,12 @@ static const char* dur_names[] =
     "antennae extend",
 #endif
     "trogs hand",
+    "manticore barbs",
+    "poison vulnerability",
+    "frozen",
+    "sap magic",
+    "magic sapped",
+    "portal projectile",
 };
 
 void wizard_edit_durations(void)
@@ -968,6 +978,12 @@ void wizard_edit_durations(void)
         num = 1;
     }
     you.duration[choice] = num;
+}
+
+void wizard_list_props()
+{
+    mprf(MSGCH_DIAGNOSTICS, "props: %s",
+         you.describe_props().c_str());
 }
 
 static void debug_uptick_xl(int newxl, bool train)

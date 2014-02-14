@@ -153,7 +153,7 @@ void MiscastEffect::init()
             kill_source = NON_MONSTER;
     }
 
-    if (kill_source == NON_MONSTER)
+    if (kill_source == NON_MONSTER || kill_source == MHITYOU)
     {
         kc           = KC_YOU;
         kt           = KILL_YOU_MISSILE;
@@ -273,11 +273,7 @@ string MiscastEffect::get_default_cause(bool attribute_to_user) const
     ASSERT(act_source == target);
 
     if (attribute_to_user)
-    {
-        return string(you.can_see(act_source) ? act_source->name(DESC_A)
-                                              : "something")
-               + " miscasting " + spell_title(spell);
-    }
+        return act_source->name(DESC_A) + " miscasting " + spell_title(spell);
     else
         return string("miscast of ") + spell_title(spell);
 }

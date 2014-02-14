@@ -112,6 +112,8 @@ public:
   FixedVector<int, NUM_ATTRIBUTES> attribute;
   FixedVector<uint8_t, NUM_AMMO> quiver; // default items for quiver
   FixedVector<int, NUM_OBJECT_CLASSES> sacrifice_value;
+  FixedVector<int, NUM_TIMERS> last_timer_effect;
+  FixedVector<int, NUM_TIMERS> next_timer_effect;
 
   undead_state_type is_undead;
 
@@ -307,6 +309,7 @@ public:
 
   bool received_weapon_warning;
   bool received_noskill_warning;
+  bool wizmode_teleported_into_rock;
 
   delay_queue_type delay_queue;       // pending actions
 
@@ -315,9 +318,11 @@ public:
   int8_t bondage_level;  // how much an Ash worshipper is into bondage
   int8_t bondage[NUM_ET];
   map<skill_type, int8_t> skill_boost; // Skill bonuses.
+  bool digging;
 
   // The last spell cast by the player.
   spell_type last_cast_spell;
+  map<int,int> last_pickup;
 
 
   // ---------------------------
@@ -479,8 +484,6 @@ public:
     string shout_verb() const;
 
     item_def *slot_item(equipment_type eq, bool include_melded=false) const;
-
-    map<int,int> last_pickup;
 
     // actor
     int mindex() const;
@@ -694,6 +697,7 @@ public:
     int shield_bypass_ability(int tohit) const;
     void shield_block_succeeded(actor *foe);
     int missile_deflection() const;
+    void ablate_deflection();
 
     // Combat-related adjusted penalty calculation methods
     int unadjusted_body_armour_penalty() const;
@@ -946,8 +950,7 @@ bool you_tran_can_wear(const item_def &item);
 bool you_tran_can_wear(int eq, bool check_mutation = false);
 
 bool enough_hp(int minimum, bool suppress_msg, bool abort_macros = true);
-bool enough_mp(int minimum, bool suppress_msg,
-               bool abort_macros = true, bool include_items = true);
+bool enough_mp(int minimum, bool suppress_msg, bool abort_macros = true);
 bool enough_zp(int minimum, bool suppress_msg);
 
 void dec_hp(int hp_loss, bool fatal, const char *aux = NULL);
@@ -981,7 +984,8 @@ void contaminate_player(int change, bool controlled = false, bool msg = true);
 
 bool confuse_player(int amount, bool quiet = false);
 
-bool curare_hits_player(int death_source, int amount, const bolt &beam);
+bool curare_hits_player(int death_source, int amount, string name,
+                        string source_name);
 bool poison_player(int amount, string source, string source_aux = "",
                    bool force = false);
 void paralyse_player(string source, int amount = 0, int factor = 1);

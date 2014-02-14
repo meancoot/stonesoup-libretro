@@ -621,7 +621,7 @@ static const char *kill_method_names[] =
     "falling_down_stairs", "acid", "curare",
     "beogh_smiting", "divine_wrath", "bounce", "reflect", "self_aimed",
     "falling_through_gate", "disintegration", "headbutt", "rolling",
-    "mirror_damage", "spines", "frailty",
+    "mirror_damage", "spines", "frailty", "barbs",
 };
 
 static const char *_kill_method_name(kill_method_type kmt)
@@ -1158,6 +1158,8 @@ void scorefile_entry::init_death_cause(int dam, int dsrc,
 
     if (!invalid_monster_index(death_source)
         && !env.mons[death_source].alive()
+        && death_type != KILLED_BY_SPORE
+        && death_type != KILLED_BY_WATER
         && auxkilldata != "exploding inner flame")
     {
         death_source = NON_MONSTER;
@@ -1213,6 +1215,9 @@ void scorefile_entry::init_death_cause(int dam, int dsrc,
 
         if (death || you.can_see(mons))
             death_source_name = mons->full_name(desc, true);
+
+        if (mons->mid == MID_PLAYER)
+            death_source_name = "their own shadow"; // heh
 
         if (death && mons->type == MONS_MARA_FAKE)
             death_source_name = "an illusion of Mara";
@@ -1551,7 +1556,7 @@ void scorefile_entry::init(time_t dt)
         STATUS_REGENERATION,
         STATUS_SICK,
         STATUS_SPEED,
-        DUR_INVIS,
+        STATUS_INVISIBLE,
         DUR_POISONING,
         STATUS_MISSILES,
         DUR_SURE_BLADE,
@@ -1562,12 +1567,16 @@ void scorefile_entry::init(time_t dt)
         DUR_WEAK,
         DUR_DIMENSION_ANCHOR,
         DUR_ANTIMAGIC,
-        DUR_SPIRIT_HOWL,
         DUR_FLAYED,
         DUR_WATER_HOLD,
         STATUS_DRAINED,
         DUR_TOXIC_RADIANCE,
         DUR_FIRE_VULN,
+        DUR_POISON_VULN,
+        DUR_FROZEN,
+        DUR_SAP_MAGIC,
+        STATUS_MAGIC_SAPPED,
+        DUR_PORTAL_PROJECTILE,
     };
 
     status_info inf;
@@ -2126,6 +2135,7 @@ string scorefile_entry::death_description(death_desc_verbosity verbosity) const
             {
                 desc += terse? "drowned by " : "Drowned by ";
                 desc += death_source_name;
+                needs_damage = true;
             }
             else
                 desc += terse? "drowned" : "Drowned";
@@ -2430,6 +2440,10 @@ string scorefile_entry::death_description(death_desc_verbosity verbosity) const
 
     case KILLED_BY_FRAILTY:
         desc += terse ? "frailty" : "Became unviable by " + auxkilldata;
+        break;
+
+    case KILLED_BY_BARBS:
+        desc += terse ? "barbs" : "Succumbed to a manticore's barbed spikes";
         break;
 
     default:

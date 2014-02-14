@@ -260,6 +260,7 @@ KFEAT: N = altar_nemelex_xobeh
 KITEM: N = any misc
 KFEAT: X = altar_xom
 KFEAT: M = altar_makhleb
+KFEAT: D = altar_dithmenos
 KMONS: l = patrolling spatial vortex
 KFEAT: ? = altar_jiyva / w:5 altar_lugonu / w:25 floor
 KMONS: m = demigod
@@ -282,7 +283,7 @@ x..........
 #.f........
 x...xxxxxx+
 x.f.x.lxm..
-x...xN.x...
+x...xNDx...
 x+xxxX?x...
 x.s5xM.x..*
 xVSKx..+..j
@@ -504,7 +505,7 @@ KMONS: A = lindwurm
 KMONS: h = redback
 KMONS: i = hydra
 KMONS: j = patrolling spriggan ; blowgun . q:5 needle ego:sleep | \
- q:5 needle ego:paralysis | q:5 needle ego:wrath
+ q:5 needle ego:paralysis | q:5 needle ego:frenzy
 KMONS: k = patrolling spriggan druid
 KMONS: q = electric eel
 KFEAT: q = deep_water
@@ -1260,7 +1261,7 @@ NAME: sprint_mu_dis_giant
 TAGS: sprint_mu_dis no_rotate no_hmirror no_vmirror no_dup
 MONS: patrolling iron elemental
 MONS: patrolling the iron giant ; giant club unrand:skullcrusher
-MONS: iron dragon, iron devil, patrolling hell sentinel, metal gargoyle, iron golem
+MONS: iron dragon, iron devil, patrolling hell sentinel, war gargoyle, iron golem
 KMONS: & = dispater
 KITEM: * = superb_item, superb_item, superb_item
 KITEM: ? = star_item, star_item, scroll of enchant armour ident:all q:4

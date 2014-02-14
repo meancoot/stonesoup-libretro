@@ -201,7 +201,7 @@ end
 -- : ice_cave_caverns_undead_demon_loot(_G)
 function ice_cave_caverns_undead_demon_loot(e)
   ice_cave_item_attributes(e)
-  e.item("cloak " .. coldres .. " good_item w:8 / wizard hat good_item / \
+  e.item("cloak " .. coldres .. " good_item w:8 / hat good_item / \
           pair of gloves good_item / pair of boots good_item / nothing")
   e.item("book of ice / book of unlife / staff of cold / staff of death / \
           randbook disc:ice disc2:necromancy numspells:6 w:2 / nothing w:30")
@@ -513,7 +513,7 @@ ITEM:    great mace good_item / battleaxe good_item / glaive good_item / \
 :   " / battleaxe " .. goodfreezeweap .. " / glaive " .. goodfreezeweap ..
 :   " / halberd " .. goodfreezeweap .. " / great sword " .. goodfreezeweap ..
 :   " / nothing w:80")
-: item("cap " .. coldres .. " / cloak " .. coldres ..
+: item("hat " .. coldres .. " / cloak " .. coldres ..
 :   " / shield " .. coldres ..  " / large shield " .. coldres ..
 :   " / animal skin " .. coldres .. " / nothing w:60")
 ITEM:    potion of resistance w:5 / potion of beneficial mutation / \
@@ -658,7 +658,7 @@ ITEM:    nothing
 KITEM:   de = book of ice / book of frost / randbook disc:ice numspells:6 w:2
 : end
 
-: item("cap " .. coldres .. " / pair of gloves " .. coldres ..
+: item("hat " .. coldres .. " / pair of gloves " .. coldres ..
 :   " / cloak " .. coldres .. " / naga barding " .. coldres .. " w:5 " ..
 :   " / centaur barding " .. coldres .. " / buckler " .. coldres .. " w:5 " ..
 :   " / helmet " .. coldres)
@@ -670,11 +670,11 @@ MAP
              xxwwwwxxx...xxx..xx
             xxwwwwxxx...xxx..xx
     xxxxxxxxxwwwxxxx3..xxx...x
-   xx.G...G.xxwwxx..33xxxx..xx     xxxxx
+   xx.G...G.xxwwxx...3xxxx..xx     xxxxx
 xxxx.........xwwx....xxxxx...xxx xxx...xxxx
 xdx....2_424.xwwx..xxxxxxxx....xxx...2....xx
 x*+.....44..2xxwx...xxxxxxxx.......2.1.2...xx
-xdx....423.342xwxx.33xxxxxxxxxx...1.....1...x
+xdx....423.342xwxx.3.xxxxxxxxxx...1.....1...x
 xxxx..4...324xxwwxxx3..xxxxxxxxx............x
    xxxG4.2G...xxwwwxxx...xxxxwwxx2........2xx
      xxxxxx....xxxxxxxx....xxxwwxx1x....x1xx
@@ -684,8 +684,8 @@ xxxx..4...324xxwwxxx3..xxxxxxxxx............x
    xxxx+xxxx.....xxx.....xxx..xxwxx..xx
   xx444544xxx...xxxxx........xxxwwx...xx
  xx.444444.xxxxxxxxx..3..3...xxwwwxx...xx
-xx..xgdegx..xxxxxx*%...3.....xxwwwxxx.66x
-x...xxffxx...xxxxx*%....3.3..xwwwwwxx6.6x
+xx..xgdegx..xxxxxx*%...1.....xxwwwxxx.66x
+x...xxffxx...xxxxx*%....3....xwwwwwxx6.6x
 x....xxxx...xxxxxxxxx.......xxxwwwxx...xx
 xxx.........xxxxxxxxxxx...xxxxwwwxxx...xx
   x...7....xxxxxxxxxxxxx..xxxwwwxxx.....xx
@@ -760,7 +760,7 @@ SUBST:   ` = .
 :   " / claymore " .. goodfreezeweap .. " / demon trident " .. goodfreezeweap ..
 :   " / giant spiked club " .. goodfreezeweap)
 ITEM: demon whip good_item / demon blade good_item / demon trident good_item
-: item("cap " .. coldres .. " / pair of gloves " .. coldres ..
+: item("hat " .. coldres .. " / pair of gloves " .. coldres ..
 :   " / cloak " .. coldres .. " / buckler " .. coldres ..
 :   " / pair of boots " .. coldres)
 : item("crystal plate armour " .. coldres ..

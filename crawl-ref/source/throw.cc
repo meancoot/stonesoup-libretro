@@ -20,6 +20,7 @@
 #include "exercise.h"
 #include "fight.h"
 #include "fineff.h"
+#include "godabil.h"
 #include "godconduct.h"
 #include "hints.h"
 #include "invent.h"
@@ -33,8 +34,10 @@
 #include "mon-behv.h"
 #include "mutation.h"
 #include "options.h"
+#include "religion.h"
 #include "shout.h"
 #include "skills2.h"
+#include "spl-summoning.h"
 #include "state.h"
 #include "stuff.h"
 #include "teleport.h"
@@ -281,6 +284,12 @@ static bool _fire_choose_item_and_target(int& slot, dist& target,
             canned_msg(MSG_OK);
         return false;
     }
+    if (teleport && cell_is_solid(target.target))
+    {
+        const char *feat = feat_type_name(grd(target.target));
+        mprf("There is %s there.", article_a(feat).c_str());
+        return false;
+    }
 
     you.m_quiver->on_item_fired(*beh.active_item(), beh.chosen_ammo);
     you.redraw_quiver = true;
@@ -430,14 +439,21 @@ int get_ammo_to_shoot(int item, dist &target, bool teleport)
 void fire_thing(int item)
 {
     dist target;
-    item = get_ammo_to_shoot(item, target);
+    // Portal Projectile, requires MP per shot.
+    bool teleport = !you.confused()
+                    && you.duration[DUR_PORTAL_PROJECTILE]
+                    && enough_mp(1, true, false);
+    int acc_bonus = 0;
+    item = get_ammo_to_shoot(item, target, teleport);
     if (item == -1)
         return;
 
     if (check_warning_inscriptions(you.inv[item], OPER_FIRE))
     {
         bolt beam;
-        throw_it(beam, item, false, 0, &target);
+        if (teleport)
+            acc_bonus = random2(you.attribute[ATTR_PORTAL_PROJECTILE] / 4);
+        throw_it(beam, item, teleport, acc_bonus, &target);
     }
 }
 
@@ -682,7 +698,11 @@ static bool _dispersal_hit_victim(bolt& beam, actor* victim, int dmg)
 
     tries = 0;
     do
-        random_near_space(victim->pos(), pos2, false, true, false, no_sanct);
+        if (!random_near_space(victim->pos(), pos2, false, true, false,
+                               no_sanct))
+        {
+            return false;
+        }
     while (!victim->is_habitable(pos2) && tries++ < 100);
 
     if (!victim->is_habitable(pos2))
@@ -766,9 +786,6 @@ static bool _charged_damages_victim(bolt &beam, actor* victim, int &dmg,
         else
             dmg_msg = "There is a sudden explosion of sparks!";
     }
-
-    if (feat_is_water(grd(victim->pos())))
-        (new lightning_fineff(beam.agent(), victim->pos()))->schedule();
 
     return false;
 }
@@ -1518,35 +1535,55 @@ bool throw_it(bolt &pbolt, int throw_2, bool teleport, int acc_bonus,
     if (!pbolt.effect_known)
         pbolt.special_explosion = NULL;
 
-    // Don't do the tracing when using Portaled Projectile, or when confused.
-    if (!teleport && !you.confused())
+    // Don't trace at all when confused.
+    // Give the player a chance to be warned about helpless targets when using
+    // Portaled Projectile, but obviously don't trace a path.
+    bool cancelled = false;
+    if (!you.confused())
     {
-        // Set values absurdly high to make sure the tracer will
-        // complain if we're attempting to fire through allies.
-        pbolt.hit    = 100;
-        pbolt.damage = dice_def(1, 100);
-
-        // Init tracer variables.
-        pbolt.foe_info.reset();
-        pbolt.friend_info.reset();
-        pbolt.foe_ratio = 100;
-        pbolt.is_tracer = true;
-
-        pbolt.fire();
-
-        // Should only happen if the player answered 'n' to one of those
-        // "Fire through friendly?" prompts.
-        if (pbolt.beam_cancelled)
+        // Kludgy. Ideally this would handled by the same code.
+        // Perhaps some notion of a zero length bolt, with the source and
+        // target both set to the target?
+        if (teleport)
         {
-            canned_msg(MSG_OK);
-            you.turn_is_over = false;
-            if (pbolt.special_explosion != NULL)
-                delete pbolt.special_explosion;
-            return false;
+            // This block is roughly equivalent to bolt::affect_cell for
+            // normal projectiles.
+            monster *m = monster_at(target->target);
+            if (m)
+                cancelled = stop_attack_prompt(m, false, target->target, false);
         }
-        pbolt.hit    = 0;
-        pbolt.damage = dice_def();
+        else
+        {
+            // Set values absurdly high to make sure the tracer will
+            // complain if we're attempting to fire through allies.
+            pbolt.hit    = 100;
+            pbolt.damage = dice_def(1, 100);
+
+            // Init tracer variables.
+            pbolt.foe_info.reset();
+            pbolt.friend_info.reset();
+            pbolt.foe_ratio = 100;
+            pbolt.is_tracer = true;
+
+            pbolt.fire();
+
+            cancelled = pbolt.beam_cancelled;
+
+            pbolt.hit    = 0;
+            pbolt.damage = dice_def();
+        }
     }
+
+    // Should only happen if the player answered 'n' to one of those
+    // "Fire through friendly?" prompts.
+    if (cancelled)
+    {
+        you.turn_is_over = false;
+        if (pbolt.special_explosion != NULL)
+            delete pbolt.special_explosion;
+        return false;
+    }
+
     pbolt.is_tracer = false;
 
     // Reset values.
@@ -1651,18 +1688,6 @@ bool throw_it(bolt &pbolt, int throw_2, bool teleport, int acc_bonus,
         // Lower accuracy if held in a net.
         if (you.attribute[ATTR_HELD])
             baseHit = baseHit / 2 - 1;
-
-        // For all launched weapons, maximum effective specific skill
-        // is twice throwing skill.  This models the fact that no matter
-        // how 'good' you are with a bow, if you know nothing about
-        // trajectories you're going to be a damn poor bowman.  Ditto
-        // for crossbows and slings.
-
-        // [dshaligram] Throwing now two parts launcher skill, one part
-        // ranged combat. Removed the old model which is... silly.
-
-        // [jpeg] Throwing now only affects actual throwing weapons,
-        // i.e. not launched ones. (Sep 10, 2007)
 
         shoot_skill = you.skill_rdiv(launcher_skill);
         effSkill    = shoot_skill;
@@ -1995,6 +2020,8 @@ bool throw_it(bolt &pbolt, int throw_2, bool teleport, int acc_bonus,
         pbolt.affect_endpoint();
         if (!did_return && acc_bonus != DEBUG_COOKIE)
             pbolt.drop_object();
+        // Costs 1 MP per shot.
+        dec_mp(1);
     }
     else
     {
@@ -2023,6 +2050,9 @@ bool throw_it(bolt &pbolt, int throw_2, bool teleport, int acc_bonus,
 
     if (ammo_brand == SPMSL_FRENZY)
         did_god_conduct(DID_HASTY, 6 + random2(3), ammo_brand_known);
+
+    if (bow_brand == SPWPN_FLAME || ammo_brand == SPMSL_FLAME)
+        did_god_conduct(DID_FIRE, 1, true);
 
     if (did_return)
     {
@@ -2062,6 +2092,14 @@ bool throw_it(bolt &pbolt, int throw_2, bool teleport, int acc_bonus,
     if (pbolt.special_explosion != NULL)
         delete pbolt.special_explosion;
 
+    if (!teleport
+        && you_worship(GOD_DITHMENOS)
+        && thrown.base_type == OBJ_MISSILES
+        && thrown.sub_type != MI_NEEDLE)
+    {
+        dithmenos_shadow_throw(thr.target);
+    }
+
     return hit;
 }
 
@@ -2079,7 +2117,7 @@ void setup_monster_throw_beam(monster* mons, bolt &beam)
 }
 
 // msl is the item index of the thrown missile (or weapon).
-bool mons_throw(monster* mons, bolt &beam, int msl)
+bool mons_throw(monster* mons, bolt &beam, int msl, bool teleport)
 {
     string ammo_name;
 
@@ -2106,8 +2144,13 @@ bool mons_throw(monster* mons, bolt &beam, int msl)
     mon_inv_type slot = get_mon_equip_slot(mons, mitm[msl]);
     ASSERT(slot != NUM_MONSTER_SLOTS);
 
-    mons->lose_energy(EUT_MISSILE);
+    // Energy is already deducted for the spell cast, if using portal projectile
+    if (!teleport)
+        mons->lose_energy(EUT_MISSILE);
     const int throw_energy = mons->action_energy(EUT_MISSILE);
+
+    actor* victim = actor_at(beam.target);
+    const int old_hp = (victim) ? victim->stat_hp() : 0;
 
     // Dropping item copy, since the launched item might be different.
     item_def item = mitm[msl];
@@ -2134,6 +2177,8 @@ bool mons_throw(monster* mons, bolt &beam, int msl)
         lnchDamBonus = mitm[weapon].plus2;
         lnchBaseDam  = property(mitm[weapon], PWPN_DAMAGE);
     }
+    else if (projected == LRET_THROWN)
+        returning = returning && !teleport;
 
     // FIXME: ammo enchantment
     ammoHitBonus = ammoDamBonus = min(3, div_rand_round(mons->hit_dice , 3));
@@ -2284,7 +2329,9 @@ bool mons_throw(monster* mons, bolt &beam, int msl)
             speed_brand = true;
         }
 
-        mons->speed_increment += speed_delta;
+        // Portal projectile is independent of weapon speed
+        if (!teleport)
+            mons->speed_increment += speed_delta;
     }
 
     // Chaos, flame, and frost.
@@ -2312,9 +2359,13 @@ bool mons_throw(monster* mons, bolt &beam, int msl)
         }
     }
 
+    // Portal projectile accuracy bonus (power / 4):
+    if (teleport)
+        beam.hit += 3 * mons->hit_dice;
+
     // Now, if a monster is, for some reason, throwing something really
     // stupid, it will have baseHit of 0 and damage of 0.  Ah well.
-    string msg = mons->name(DESC_THE);
+    string msg = ((teleport) ? "Magically, " : "") + mons->name(DESC_THE);
     msg += ((projected == LRET_LAUNCHED) ? " shoots " : " throws ");
 
     if (!beam.name.empty() && projected == LRET_LAUNCHED)
@@ -2415,11 +2466,22 @@ bool mons_throw(monster* mons, bolt &beam, int msl)
     // Redraw the screen before firing, in case the monster just
     // came into view and the screen hasn't been updated yet.
     viewwindow();
-    beam.fire();
+    if (teleport)
+    {
+        beam.use_target_as_pos = true;
+        beam.affect_cell();
+        beam.affect_endpoint();
+        if (!really_returns)
+            beam.drop_object();
+    }
+    else
+    {
+        beam.fire();
 
-    // The item can be destroyed before returning.
-    if (really_returns && thrown_object_destroyed(&item, beam.target))
-        really_returns = false;
+        // The item can be destroyed before returning.
+        if (really_returns && thrown_object_destroyed(&item, beam.target))
+            really_returns = false;
+    }
 
     if (really_returns)
     {
@@ -2448,6 +2510,14 @@ bool mons_throw(monster* mons, bolt &beam, int msl)
 
     if (beam.special_explosion != NULL)
         delete beam.special_explosion;
+
+    if (mons->has_ench(ENCH_GRAND_AVATAR))
+    {
+        // We want this to be a ranged attack, like the spell mirroring,
+        // so any spell that fires a battlesphere will do here.
+        // XXX: make triggering of this less hacky
+        trigger_grand_avatar(mons, victim, SPELL_MAGIC_DART, old_hp);
+    }
 
     return true;
 }

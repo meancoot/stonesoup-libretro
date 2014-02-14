@@ -164,7 +164,6 @@ function trove.portal(e)
         }
     end
     e.tags("uniq_trove no_monster_gen chance_trove")
-    e.chance(500)
     e.lua_marker("O", stair)
     e.kfeat("O = enter_trove")
     e.colour(". = blue")
@@ -233,12 +232,14 @@ default-depth: D:10-, Depths, Elf, Vaults
 ##############################################################################
 
 NAME:   enter_trove_0
+CHANCE: 5%
 : trove.portal(_G)
 MAP
 O
 ENDMAP
 
 NAME:   enter_trove_1
+CHANCE: 5%
 : trove.portal(_G)
 MAP
 ...
@@ -247,6 +248,7 @@ MAP
 ENDMAP
 
 NAME:   enter_trove_2
+CHANCE: 5%
 : trove.portal(_G)
 MAP
  @G@
@@ -258,6 +260,7 @@ ENDMAP
 
 NAME:   enter_trove_3
 TAGS:   uniq_trove no_monster_gen no_wall_fixup
+CHANCE: 5%
 : trove.portal(_G)
 COLOUR: .c = blue
 FTILE:  .cO = floor_marble
@@ -271,14 +274,14 @@ ENDMAP
 
 # Of course, not everyone is willing for you to take their treasure...
 NAME:   enter_trove_5
+CHANCE: 5%
 : trove.portal(_G)
 : if you.absdepth() <= 15 then
 # Got drafted in from Vaults:$, while the mages try and close the portal down.
 KMONS:  e = vault guard
 : else
 # And this time he brought some friends...
-KMONS:  e = vault guard
-KMONS:  l = vault guard
+KMONS:  el = vault guard
 : end
 MAP
 ccccc
@@ -295,6 +298,7 @@ ENDMAP
 
 # Someone left some gold behind for you!
 NAME:   enter_trove_6
+CHANCE: 5%
 : trove.portal(_G)
 KFEAT:  X = +
 MARKER: X = lua: props_marker { connected_exclude="true" }
@@ -311,6 +315,7 @@ ccc+ccc
 ENDMAP
 
 NAME: nicolae_trove_entry_columns
+CHANCE: 5%
 : trove.portal(_G)
 MAP
 cccccccccccc
@@ -325,6 +330,7 @@ ENDMAP
 
 NAME: nicolae_trove_entry_crossroad
 TAGS: transparent
+CHANCE: 5%
 : trove.portal(_G)
 COLOUR: @ = blue
 FTILE: @ = floor_marble
@@ -337,6 +343,7 @@ cc@cc
 ENDMAP
 
 NAME: nicolae_trove_entry_crystal
+CHANCE: 5%
 : trove.portal(_G)
 FTILE: b = floor_marble
 MAP
@@ -350,6 +357,7 @@ ccccccccccc
 ENDMAP
 
 NAME: nicolae_trove_entry_diagonal
+CHANCE: 5%
 : trove.portal(_G)
 MAP
    c
@@ -367,6 +375,7 @@ cccO.cc
 ENDMAP
 
 NAME: nicolae_trove_entry_free_sample
+CHANCE: 5%
 : trove.portal(_G)
 COLOUR: % = blue
 FTILE: % = floor_marble
@@ -378,6 +387,7 @@ ENDMAP
 
 NAME: nicolae_trove_entry_isolated
 TAGS: no_pool_fixup
+CHANCE: 5%
 KPROP: .O = no_rtele_into
 KFEAT: ' = .
 : trove.portal(_G)
@@ -392,6 +402,7 @@ MAP
 ENDMAP
 
 NAME: nicolae_trove_entry_path_of_doom
+CHANCE: 5%
 KMONS: O = patrolling guardian mummy
 KMONS: m = patrolling guardian mummy / nothing w:20
 : trove.portal(_G)
@@ -410,6 +421,7 @@ cc.....cc
 ENDMAP
 
 NAME: trove_entry_hex_spiral
+CHANCE: 5%
 : trove.portal(_G)
 MAP
              @cc
@@ -838,88 +850,6 @@ ENDMAP
 #
 # minmay's troves
 #
-# A severe exaggeration of the "game-changing or junk" aspect of treasure
-# troves. Three items, very likely to be unrandarts, and generally either
-# extremely useful or extremely useless.
-#
-NAME:    trove_artefacts
-TAGS:    no_item_gen no_monster_gen allow_dup no_species_fe
-WEIGHT:  1
-ORIENT:  encompass
-######## There should be a better way than listing all of the unrandarts...
-ITEM:    chain mail unrand:lears_hauberk                                     /\
-         randart plate armour w:50                                           /\
-         plate armour unrand:maxwells_patent_armour                          /\
-         randart fire dragon armour                                          /\
-         gold dragon armour unrand:armour_of_the_dragon_king                 /\
-         randart crystal plate armour                                        /\
-         leather armour unrand:salamander_hide_armour / randart robe w:50    /\
-         robe unrand:robe_of_night / robe unrand:robe_of_clouds              /\
-         robe unrand:robe_of_misfortune / animal skin unrand:skin_of_zhor    /\
-         robe unrand:robe_of_augmentation / robe unrand:robe_of_folly        /\
-         randart buckler / randart shield / randart large shield             /\
-         shield unrand:shield_of_resistance / shield unrand:bullseye         /\
-         large shield unrand:large_shield_of_ignorance                       /\
-         shield unrand:shield_of_the_gong / randart cloak w:25               /\
-         cloak unrand:cloak_of_flash / cloak unrand:cloak_of_starlight       /\
-         cloak unrand:cloak_of_the_thief / cloak unrand:ratskin_cloak
-ITEM:    ring of evasion unrand:ring_of_shaolin / any randart jewellery w:60 /\
-         ring of protection unrand:ring_of_robustness                        /\
-         ring of invisibility unrand:ring_of_shadows                         /\
-         ring of wizardry unrand:ring_of_the_mage                            /\
-         ring of protection unrand:ring_of_the_octopus_king                  /\
-         ring of regeneration unrand:ring_of_vitality                        /\
-         amulet of inaccuracy unrand:amulet_of_the_air                       /\
-         amulet of clarity unrand:amulet_of_the_four_winds                   /\
-         amulet of warding unrand:amulet_of_cekugob                          /\
-         amulet of warding unrand:brooch_of_shielding                        /\
-         amulet of rage unrand:necklace_of_bloodlust                         /\
-         helmet unrand:crown_of_dyrovepreva / randart helmet / randart cap   /\
-         cap unrand:mask_of_the_dragon / randart wizard hat                  /\
-         cap unrand:hat_of_the_bear_spirit                                   /\
-         wizard hat unrand:hat_of_the_alchemist / randart pair of gloves     /\
-         wizard hat unrand:hat_of_pondering / randart pair of boots          /\
-         pair of gloves unrand:gauntlets_of_war                              /\
-         pair of gloves unrand:fencers_gloves                                /\
-         naga barding unrand:lightning_scales                                /\
-         centaur barding unrand:black_knights_horse_barding
-ITEM:    dagger unrand:vampires_tooth / dagger unrand:dagger_of_chilly_death /\
-         dagger unrand:spriggans_knife / eudemon blade unrand:sword_of_jihad /\
-         dagger unrand:morg / great sword unrand:sword_of_the_doom_knight    /\
-         great sword unrand:sword_of_power / demon blade unrand:bloodbane    /\
-         scimitar unrand:scimitar_of_flaming_death / broad axe unrand:arga   /\
-         broad axe unrand:obsidian_axe / claymore unrand:plutonium_sword /\
-         demon blade unrand:leech / bastard sword unrand:sword_of_zonguldrok  /\
-         staff of poison unrand:staff_of_olgreb / scythe unrand:finisher     /\
-         quarterstaff unrand:elemental_staff / mace unrand:devastator        /\
-         staff of energy unrand:staff_of_wucad_mu                            /\
-         glaive unrand:glaive_of_prune / spear unrand:lehudibs_crystal_spear /\
-         spear unrand:spear_of_the_botono / long sword unrand:singing_sword  /\
-         battleaxe unrand:wrath_of_trog / glaive unrand:glaive_of_the_guard  /\
-         trident unrand:trident_of_the_octopus_king / spear unrand:wyrmbane  /\
-         scythe unrand:scythe_of_curses / giant club unrand:skullcrusher     /\
-         great mace unrand:undeadhunter / whip unrand:snakebite              /\
-         mace unrand:sceptre_of_torment / mace unrand:mace_of_variability    /\
-         mace unrand:mace_of_brilliance / morningstar unrand:eos             /\
-         sling unrand:punk / longbow unrand:bow_of_krishna_"sharnga"         /\
-         crossbow unrand:hellfire / crossbow unrand:sniper                   /\
-         longbow unrand:piercer / longbow unrand:storm_bow                   /\
-         long sword unrand:autumn_katana / cutlass unrand:captains_cutlass     /\
-         randart demon blade / blowgun unrand:blowgun_of_the_assassin
-SHUFFLE: def
-: trove.setup_features(_G)
-MAP
-xxxxxxx
-xG...Gx
-x.....x
-x.A.<.x
-x.....x
-xG...Gx
-xxx+xxx
- xdefx
- xxxxx
-ENDMAP
-
 # Alchemist's storehouse, has 14-26 desirable potions
 NAME:    trove_alchemists_storehouse
 TAGS:    no_item_gen no_monster_gen allow_dup no_species_mu

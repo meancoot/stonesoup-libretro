@@ -36,12 +36,6 @@ void final_effect::schedule()
     env.final_effects.push_back(this);
 }
 
-bool lightning_fineff::mergeable(const final_effect &fe) const
-{
-    const lightning_fineff *o = dynamic_cast<const lightning_fineff *>(&fe);
-    return o && att == o->att && posn == o->posn;
-}
-
 bool mirror_damage_fineff::mergeable(const final_effect &fe) const
 {
     const mirror_damage_fineff *o =
@@ -94,6 +88,12 @@ bool starcursed_merge_fineff::mergeable(const final_effect &fe) const
     return o && def == o->def;
 }
 
+bool shock_serpent_discharge_fineff::mergeable(const final_effect &fe) const
+{
+    const shock_serpent_discharge_fineff *o = dynamic_cast<const shock_serpent_discharge_fineff *>(&fe);
+    return o && def == o->def;
+}
+
 bool delayed_action_fineff::mergeable(const final_effect &fe) const
 {
     return false;
@@ -132,13 +132,6 @@ void deferred_damage_fineff::merge(const final_effect &fe)
     ASSERT(ddamfe);
     ASSERT(mergeable(*ddamfe));
     damage += ddamfe->damage;
-}
-
-void lightning_fineff::fire()
-{
-    if (you.see_cell(posn))
-        mpr("Electricity arcs through the water!");
-    conduct_electricity(posn, attacker());
 }
 
 void mirror_damage_fineff::fire()
@@ -303,6 +296,13 @@ void starcursed_merge_fineff::fire()
     actor *defend = defender();
     if (defend && defend->alive())
         starcursed_merge(defender()->as_monster(), true);
+}
+
+void shock_serpent_discharge_fineff::fire()
+{
+    actor *defend = defender();
+    if (defend && defend->alive())
+        shock_serpent_discharge(defender()->as_monster());
 }
 
 void delayed_action_fineff::fire()

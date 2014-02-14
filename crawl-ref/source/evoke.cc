@@ -260,62 +260,11 @@ static bool _evoke_horn_of_geryon(item_def &item)
         mpr("You can't produce a sound!");
         return false;
     }
-    else if (player_in_branch(BRANCH_VESTIBULE))
-    {
-        mpr("You produce a weird and mournful sound.");
 
-        if (you.char_direction == GDT_ASCENDING)
-        {
-            mpr("But nothing happens...");
-            return false;
-        }
-
-        for (int count_x = 0; count_x < GXM; count_x++)
-            for (int count_y = 0; count_y < GYM; count_y++)
-            {
-                if (grd[count_x][count_y] == DNGN_STONE_ARCH)
-                {
-                    rc = true;
-
-                    map_marker *marker =
-                        env.markers.find(coord_def(count_x, count_y),
-                                         MAT_FEATURE);
-
-                    if (marker)
-                    {
-                        map_feature_marker *featm =
-                            dynamic_cast<map_feature_marker*>(marker);
-                        // [ds] Ensure we're activating the correct feature
-                        // markers. Feature markers are also used for other
-                        // things, notably to indicate the return point from
-                        // a labyrinth or portal vault.
-                        switch (featm->feat)
-                        {
-                        case DNGN_ENTER_COCYTUS:
-                        case DNGN_ENTER_DIS:
-                        case DNGN_ENTER_GEHENNA:
-                        case DNGN_ENTER_TARTARUS:
-                            grd[count_x][count_y] = featm->feat;
-                            env.markers.remove(marker);
-                            item.plus2++;
-                            break;
-                        default:
-                            break;
-                        }
-                    }
-                }
-            }
-
-        if (rc)
-            mpr("Your way has been unbarred.");
-    }
-    else
-    {
-        mprf(MSGCH_SOUND, "You produce a hideous howling noise!");
-        create_monster(
-            mgen_data::hostile_at(MONS_HELL_BEAST, "the horn of Geryon",
-                true, 4, 0, you.pos()));
-    }
+    mprf(MSGCH_SOUND, "You produce a hideous howling noise!");
+    create_monster(
+        mgen_data::hostile_at(MONS_HELL_BEAST, "the horn of Geryon",
+            true, 4, 0, you.pos()));
     return rc;
 }
 
@@ -1050,6 +999,8 @@ static bool _lamp_of_fire()
         if (you.confused())
             target.confusion_fuzz();
 
+        did_god_conduct(DID_FIRE, 6 + random2(3));
+
         mpr("The flames dance!");
 
         vector<bolt> beams;
@@ -1500,7 +1451,7 @@ static bool _phial_of_floods()
         coord_def center = beam.path_taken.back();
         int num = 5 + you.skill_rdiv(SK_EVOCATIONS, 3, 5) + random2(7);
         int dur = 40 + you.skill_rdiv(SK_EVOCATIONS, 8, 3);
-        for (distance_iterator di(center, true, false, 2); di && (num > 0); ++di)
+        for (distance_iterator di(center, true, false, 2); di && num > 0; ++di)
         {
             if ((grd(*di) == DNGN_FLOOR || grd(*di) == DNGN_SHALLOW_WATER)
                 && cell_see_cell(center, *di, LOS_NO_TRANS))
@@ -1542,7 +1493,7 @@ static void _expend_elemental_evoker(item_def &item)
     item.plus2 = 10;
 }
 
-bool evoke_item(int slot)
+bool evoke_item(int slot, bool check_range)
 {
     if (you.form == TRAN_WISP)
         return mpr("You cannot handle anything in this form."), false;
@@ -1631,7 +1582,7 @@ bool evoke_item(int slot)
             return false;
         }
 
-        pract = rod_spell(slot);
+        pract = rod_spell(slot, check_range);
         // [ds] Early exit, no turns are lost.
         if (pract == -1)
             return false;

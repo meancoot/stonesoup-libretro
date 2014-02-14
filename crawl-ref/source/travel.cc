@@ -775,7 +775,7 @@ static void _explore_find_target_square()
 
             // Try moving along the line that bisects the right angle.
             if ((abs(prev_travel_moves[0] - prev_travel_moves[1]) == 6)
-                && (prev_travel_moves[0] + prev_travel_moves[1] == 8))
+                && prev_travel_moves[0] + prev_travel_moves[1] == 8)
             {
                 anti_zigzag_dir = 0;
             }
@@ -4266,9 +4266,7 @@ void explore_discoveries::found_feature(const coord_def &pos,
         runed_doors.push_back(rdoor);
         es_flags |= ES_RUNED_DOOR;
     }
-    else if (feat_is_altar(feat)
-             && ES_altar
-             && !player_in_branch(BRANCH_TEMPLE))
+    else if (feat_is_altar(feat) && ES_altar)
     {
         const named_thing<int> altar(cleaned_feature_description(pos), 1);
         if (!merge_feature(altars, altar))

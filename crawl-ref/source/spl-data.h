@@ -888,7 +888,7 @@ struct spell_desc
      SPTYP_CHARMS | SPTYP_AIR,
      SPFLAG_NONE,
      2,
-     200,
+     50,
      -1, -1,
      0,
      NULL,
@@ -1610,7 +1610,7 @@ struct spell_desc
     SPELL_ENGLACIATION, "Metabolic Englaciation",
      SPTYP_HEXES | SPTYP_ICE,
      SPFLAG_AREA,
-     6,
+     5,
      200,
      -1, -1,
      0,
@@ -1873,10 +1873,10 @@ struct spell_desc
 {
     SPELL_PORTAL_PROJECTILE, "Portal Projectile",
      SPTYP_TRANSLOCATION,
-     SPFLAG_TARGET | SPFLAG_BATTLE,
-     2,
+     SPFLAG_BATTLE,
+     3,
      50,
-     LOS_RADIUS, LOS_RADIUS,
+     -1, -1,
      0,
      NULL,
      false,
@@ -3310,6 +3310,279 @@ struct spell_desc
      0,
      NULL,
      false,
+     false
+},
+
+{
+    SPELL_INVISIBILITY_OTHER, "Invisibility Other",
+     SPTYP_CHARMS | SPTYP_HEXES,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_NOT_SELF | SPFLAG_HELPFUL,
+     6,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     true
+},
+
+{
+    SPELL_VIRULENCE, "Virulence",
+     SPTYP_POISON | SPTYP_HEXES,
+     SPFLAG_DIR_OR_TARGET,
+     4,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_IGNITE_POISON_SINGLE, "Localized Ignite Poison",
+     SPTYP_FIRE | SPTYP_TRANSMUTATION,
+     SPFLAG_MONSTER | SPFLAG_DIR_OR_TARGET | SPFLAG_NOT_SELF,
+     4,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_ORB_OF_ELECTRICITY, "Orb of Electricity",
+     SPTYP_CONJURATION | SPTYP_AIR,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_MONSTER,
+     7,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_EXPLOSIVE_BOLT, "Explosive Bolt",
+     SPTYP_CONJURATION | SPTYP_FIRE,
+     SPFLAG_DIR_OR_TARGET,
+     6,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_FLASH_FREEZE, "Flash Freeze",
+     SPTYP_CONJURATION | SPTYP_ICE,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_MONSTER,
+     7,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_LEGENDARY_DESTRUCTION, "Legendary Destruction",
+     SPTYP_CONJURATION,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_MONSTER,
+     8,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_EPHEMERAL_INFUSION, "Ephemeral Infusion",
+     SPTYP_CHARMS | SPTYP_NECROMANCY,
+     SPFLAG_MONSTER,
+     8,
+     200,
+     -1, -1,
+     0,
+     NULL,
+     false,
+     false
+},
+
+{
+    SPELL_FORCEFUL_INVITATION, "Forceful Invitation",
+     SPTYP_SUMMONING,
+     SPFLAG_BATTLE | SPFLAG_MONSTER,
+     4,
+     200,
+     -1, -1,
+     0,
+     NULL,
+     false,
+     false
+},
+
+{
+    SPELL_PLANEREND, "Plane Rend",
+     SPTYP_SUMMONING,
+     SPFLAG_BATTLE | SPFLAG_MONSTER,
+     8,
+     200,
+     -1, -1,
+     0,
+     NULL,
+     false,
+     false
+},
+
+{
+    SPELL_CHAIN_OF_CHAOS, "Chain of Chaos",
+     SPTYP_CONJURATION,
+     SPFLAG_AREA | SPFLAG_MONSTER | SPFLAG_CHAOTIC,
+     8,
+     200,
+     -1, -1,
+     0,
+     NULL,
+     false,
+     false
+},
+
+{
+    SPELL_CHAOTIC_MIRROR, "Chaotic Mirror",
+     SPTYP_NONE,
+     SPFLAG_TARGET | SPFLAG_NOT_SELF | SPFLAG_CHAOTIC | SPFLAG_MONSTER,
+     4,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     4,
+     NULL,
+     false,
+     false
+},
+
+{
+    SPELL_BLACK_MARK, "Black Mark",
+     SPTYP_CHARMS | SPTYP_NECROMANCY,
+     SPFLAG_MONSTER,
+     7,
+     200,
+     -1, -1,
+     0,
+     NULL,
+     false,
+     false
+},
+
+{
+    SPELL_GRAND_AVATAR, "Grand Avatar",
+      SPTYP_CONJURATION | SPTYP_CHARMS | SPTYP_HEXES,
+      SPFLAG_MONSTER,
+      4,
+      100,
+      -1, -1,
+      0,
+      NULL,
+      false,
+      true
+},
+
+{
+    SPELL_SAP_MAGIC, "Sap Magic",
+     SPTYP_HEXES,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_MONSTER,
+     5,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_CORRUPT_BODY, "Corrupt Body",
+     SPTYP_TRANSMUTATION | SPTYP_HEXES,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_NOT_SELF | SPFLAG_CHAOTIC,
+     4,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_REARRANGE_PIECES, "Rearrange the Pieces",
+     SPTYP_HEXES,
+     SPFLAG_AREA | SPFLAG_MONSTER | SPFLAG_CHAOTIC,
+     8,
+     200,
+     -1, -1,
+     0,
+     NULL,
+     false,
+     false
+},
+
+{
+    SPELL_MAJOR_DESTRUCTION, "Major Destruction",
+     SPTYP_CONJURATION,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_CHAOTIC,
+     7,
+     200,
+     7, 7,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_BLINK_ALLIES_AWAY, "Blink Allies Away",
+     SPTYP_TRANSLOCATION,
+     SPFLAG_AREA,
+     6,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     false,
+     false
+},
+
+{
+    SPELL_SHADOW_SHARD, "Shadow Shard",
+     SPTYP_CONJURATION,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_MONSTER,
+     5,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
+     false
+},
+
+{
+    SPELL_SHADOW_BOLT, "Shadow Bolt",
+     SPTYP_CONJURATION,
+     SPFLAG_DIR_OR_TARGET | SPFLAG_MONSTER,
+     5,
+     200,
+     LOS_RADIUS, LOS_RADIUS,
+     0,
+     NULL,
+     true,
      false
 },
 

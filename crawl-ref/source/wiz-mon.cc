@@ -627,9 +627,8 @@ void debug_stethoscope(int mon)
          : mons_is_wandering(&mons)       ? "wander"
          : mons_is_seeking(&mons)         ? "seek"
          : mons_is_fleeing(&mons)         ? "flee"
-         : mons_is_retreating(&mons)      ? "retreat"
+         : mons.behaviour == BEH_RETREAT  ? "retreat"
          : mons_is_cornered(&mons)        ? "cornered"
-         : mons_is_panicking(&mons)       ? "panic"
          : mons_is_lurking(&mons)         ? "lurk"
          : mons.behaviour == BEH_WITHDRAW ? "withdraw"
          :                                  "unknown",
@@ -1311,6 +1310,11 @@ void debug_pathfind(int idx)
     if (success)
     {
         vector<coord_def> path = mp.backtrack();
+        env.travel_trail = path;
+#ifdef USE_TILE_WEB
+        for (unsigned int i = 0; i < env.travel_trail.size(); ++i)
+            tiles.update_minimap(env.travel_trail[i]);
+#endif
         string path_str;
         mpr("Here's the shortest path: ");
         for (unsigned int i = 0; i < path.size(); ++i)

@@ -125,7 +125,7 @@ ENDMAP
 
 # 23.2k/19.9k/13k
 NAME:   hangedman_fish_farm
-DEPTH:  D:7-14
+DEPTH:  D:9-14
 : food_weight(_G, 7)
 WEIGHT: 15
 TAGS:   uniq_second_food extra chance_second_food no_monster_gen no_pool_fixup \
@@ -284,21 +284,20 @@ ENDMAP
 
 # 20.6k/23k/12.5k (min 18k/6k/0)
 NAME:    hangedman_stone_soup
-DEPTH:   D:8-14
+DEPTH:   D:10-14
 : food_weight(_G, 8)
 WEIGHT:  10
 TAGS:    uniq_second_food extra chance_second_food patrolling no_rotate no_vmirror
 # Branch representatives working together to cook some soup:
-# D, Orc, Elf, Snake, Shoals, Vaults, Crypt, Hells, Zot.
+# D, Orc, Elf, Swamp, Shoals, Vaults, Crypt, Hells, Zot.
 KMONS:   A = kobold
 KMONS:   B = orc
 KMONS:   C = deep elf fighter
-KMONS:   D = naga
+KMONS:   D = spriggan
 KMONS:   E = merfolk
 KMONS:   F = human
 KMONS:   G = necrophage
 KMONS:   H = crimson imp
-KMONS:   I = draconian
 KITEM:   1 = stone q:1 no_pickup / large rock q:1 w:5
 KITEM:   Ya = royal jelly no_mimic / meat ration no_mimic / \
               bread ration no_mimic
@@ -309,16 +308,16 @@ KMASK:   1Yac = no_monster_gen
 MARKER:  Y = lua:fog_machine { cloud_type = "steam", pow_min = 1, \
                  pow_max = 10, delay = 60, size = 1, walk_dist = 0 }
 MARKER:  Z = lua:fog_machine { cloud_type = "flame", pow_min = 100, pow_max = 100, \
-                 delay = 10, size = 1, walk_dist = 0, excl_rad = -1 }
+                 delay = 10, size = 1, walk_dist = 0, excl_rad = 0 }
 NSUBST:  c = 2:a / *:b
-SHUFFLE: ABCDEFGHI
+SHUFFLE: ABCDEFGH
 MAP
  .......
 ..A...B..
 ..vv.vv..
 ..vcccv..
-..vY1cv..
-..vcccv..
+..vc1cv..
+..vcYcv..
 .CvvvvvD.
 ...Z.Z...
  .......
@@ -390,7 +389,7 @@ ENDMAP
 
 # 20.8k/23.8k/12.0k
 # Welcome to Pandemonium Pizzeria; is this for carry-out or delivery?
-# (Ideally the cashier would have a silly cap, but they can't wear caps.)
+# (Ideally the cashier would have a silly hat, but they can't wear hats.)
 NAME:   grunt_pizzeria
 DEPTH:  D:8-14
 : food_weight(_G, 8)

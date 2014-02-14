@@ -188,7 +188,8 @@ public:
     string      user_note_prefix; // Prefix for user notes
     int         note_hp_percent;  // percentage hp for notetaking
     bool        note_xom_effects; // take note of all Xom effects
-    bool        note_chat_messages; // log chat in DGL/Webtiles
+    bool        note_chat_messages; // log chat in Webtiles
+    bool        note_dgl_messages; // log chat in DGL
     confirm_level_type easy_confirm;    // make yesno() confirming easier
     bool        easy_quit_item_prompts; // make item prompts quitable on space
     confirm_prompt_type allow_self_target;      // yes, no, prompt
@@ -335,10 +336,9 @@ public:
     bool        target_unshifted_dirs; // Unshifted keys target if cursor is
                                        // on player.
 
-    int         drop_mode;          // Controls whether single or multidrop
-                                    // is the default.
     bool        pickup_menu;        // false for single, true for menu
-
+    int         pickup_menu_limit;  // Over this number of items, menu for
+                                    // pickup
     bool        easy_exit_menu;     // Menus are easier to get out of
 
     int         assign_item_slot;   // How free slots are assigned
@@ -379,6 +379,7 @@ public:
 #ifdef WIZARD
     // Parameters for fight simulations.
     string      fsim_mode;
+    bool        fsim_csv;
     int         fsim_rounds;
     string      fsim_mons;
     vector<string> fsim_scale;
@@ -455,11 +456,14 @@ public:
     bool        tile_show_minimagicbar;
     bool        tile_show_demon_tier;
     bool        tile_water_anim;
+    bool        tile_misc_anim;
     vector<string> tile_layout_priority;
 #endif
 #ifdef USE_TILE_WEB
     bool        tile_realtime_anim;
     string      tile_display_mode;
+    bool        tile_level_map_hide_messages;
+    bool        tile_level_map_hide_sidebar;
 #endif
 
     typedef map<string, string> opt_map;

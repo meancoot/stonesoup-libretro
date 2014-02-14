@@ -107,6 +107,14 @@ enum monster_info_flags
     MB_FIRE_VULN,
     MB_TORNADO,
     MB_TORNADO_COOLDOWN,
+    MB_BARBS,
+    MB_POISON_VULN,
+    MB_ICEMAIL,
+    MB_AGILE,
+    MB_FROZEN,
+    MB_BLACK_MARK,
+    MB_SAP_MAGIC,
+    MB_SHROUD,
     NUM_MB_FLAGS
 };
 
@@ -132,6 +140,7 @@ struct monster_info_base
     resists_t mresists;
     mon_itemuse_type mitemuse;
     int mbase_speed;
+    mon_energy_usage menergy;
     flight_type fly;
     CrawlHashTable props;
     string constrictor_name;
@@ -242,7 +251,7 @@ struct monster_info : public monster_info_base
 
     string constriction_description() const;
 
-    monster_type draco_subspecies() const
+    monster_type draco_or_demonspawn_subspecies() const
     {
         return draco_type;
     }
@@ -306,8 +315,6 @@ struct monster_info : public monster_info_base
     {
         return mons_class_flag(this->type, M_FAKE_SPELLS) || this->props.exists("fake_spells");
     }
-
-    vector<mon_spellbook_type> get_spellbooks() const;
 
 protected:
     string _core_name() const;

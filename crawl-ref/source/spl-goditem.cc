@@ -381,6 +381,8 @@ int cast_healing(int pow, int max_pow, bool divine_ability,
 {
     pow = min(50, pow);
     max_pow = min(50, max_pow);
+    if (!not_self && !divine_ability && you.mutation[MUT_NO_DEVICE_HEAL])
+        return 0;
     return _healing_spell(pow + roll_dice(2, pow) - 2, (3 * max_pow) - 2,
                           divine_ability, where, not_self, mode);
 }
@@ -396,15 +398,17 @@ void antimagic()
     {
         DUR_INVIS, DUR_CONF, DUR_PARALYSIS, DUR_HASTE, DUR_MIGHT, DUR_AGILITY,
         DUR_BRILLIANCE, DUR_CONFUSING_TOUCH, DUR_SURE_BLADE, DUR_CORONA,
-        DUR_FIRE_SHIELD, DUR_ICY_ARMOUR, DUR_REPEL_MISSILES,
+        DUR_FIRE_SHIELD, DUR_ICY_ARMOUR,
         DUR_SWIFTNESS, DUR_CONTROL_TELEPORT,
-        DUR_TRANSFORMATION, DUR_DEATH_CHANNEL, DUR_DEFLECT_MISSILES,
+        DUR_TRANSFORMATION, DUR_DEATH_CHANNEL,
         DUR_PHASE_SHIFT, DUR_WEAPON_BRAND, DUR_SILENCE,
         DUR_CONDENSATION_SHIELD, DUR_STONESKIN, DUR_RESISTANCE,
         DUR_SLAYING, DUR_STEALTH,
         DUR_MAGIC_SHIELD, DUR_PETRIFIED, DUR_LIQUEFYING, DUR_DARKNESS,
         DUR_SHROUD_OF_GOLUBRIA, DUR_DISJUNCTION, DUR_SENTINEL_MARK,
-        DUR_ANTIMAGIC /*!*/, DUR_REGENERATION,
+        DUR_ANTIMAGIC /*!*/, DUR_REGENERATION, DUR_TOXIC_RADIANCE,
+        DUR_FIRE_VULN, DUR_POISON_VULN, DUR_SAP_MAGIC, DUR_MAGIC_SAPPED,
+        DUR_PORTAL_PROJECTILE,
     };
 
     bool need_msg = false;
@@ -433,6 +437,12 @@ void antimagic()
         you.attribute[ATTR_DELAYED_FIREBALL] = 0;
         mprf(MSGCH_DURATION, "Your charged fireball dissipates.");
     }
+
+    if (you.attribute[ATTR_REPEL_MISSILES])
+        you.attribute[ATTR_REPEL_MISSILES] = 0;
+
+    if (you.attribute[ATTR_DEFLECT_MISSILES])
+        you.attribute[ATTR_DEFLECT_MISSILES] = 0;
 
     if (you.attribute[ATTR_SWIFTNESS] > 0)
         you.attribute[ATTR_SWIFTNESS] = 0;

@@ -62,6 +62,7 @@
 #include "env.h"
 #include "errors.h"
 #include "exercise.h"
+#include "goditem.h"
 #include "map_knowledge.h"
 #include "fprop.h"
 #include "fight.h"
@@ -199,6 +200,7 @@ NORETURN static void _launch_game();
 
 static void _do_berserk_no_combat_penalty(void);
 static void _do_searing_ray(void);
+static void _extract_manticore_spikes(void);
 static void _input(void);
 static void _move_player(int move_x, int move_y);
 static void _move_player(coord_def move);
@@ -225,6 +227,7 @@ static void _announce_goal_message();
 static void _god_greeting_message(bool game_start);
 static void _take_starting_note();
 static void _startup_hints_mode();
+static void _set_removed_types_as_identified();
 
 static void _compile_time_asserts();
 
@@ -416,6 +419,8 @@ NORETURN static void _launch_game()
 
     // Override some options when playing in hints mode.
     init_hints_options();
+
+    _set_removed_types_as_identified();
 
     if (!game_start && you.prev_save_version != Version::Long)
     {
@@ -613,6 +618,7 @@ static void _take_starting_note()
             << you.class_name
             << ", began the quest for the Orb.";
     take_note(Note(NOTE_MESSAGE, 0, 0, notestr.str().c_str()));
+    mark_milestone("begin", "began the quest for the Orb.");
 
     notestr.str("");
     notestr.clear();
@@ -648,6 +654,22 @@ static void _startup_hints_mode()
     const int ch = getch_ck();
     if (!key_is_escape(ch))
         hints_starting_screen();
+}
+
+// required so that maybe_identify_base_type works correctly
+static void _set_removed_types_as_identified()
+{
+#if TAG_MAJOR_VERSION == 34
+    you.type_ids[OBJ_JEWELLERY][AMU_CONTROLLED_FLIGHT] = ID_KNOWN_TYPE;
+    you.type_ids[OBJ_STAVES][STAFF_ENCHANTMENT] = ID_KNOWN_TYPE;
+    you.type_ids[OBJ_STAVES][STAFF_CHANNELING] = ID_KNOWN_TYPE;
+    you.type_ids[OBJ_POTIONS][POT_GAIN_STRENGTH] = ID_KNOWN_TYPE;
+    you.type_ids[OBJ_POTIONS][POT_GAIN_DEXTERITY] = ID_KNOWN_TYPE;
+    you.type_ids[OBJ_POTIONS][POT_GAIN_INTELLIGENCE] = ID_KNOWN_TYPE;
+    you.type_ids[OBJ_POTIONS][POT_WATER] = ID_KNOWN_TYPE;
+#endif
+    // not generated, but the enum value is still used
+    you.type_ids[OBJ_POTIONS][POT_SLOWING] = ID_KNOWN_TYPE;
 }
 
 #ifdef WIZARD
@@ -740,7 +762,9 @@ static void _do_wizard_command(int wiz_command, bool silent_fail)
     case 'w': wizard_god_mollify();                  break;
     case '#': wizard_load_dump_file();               break;
     case '&': wizard_list_companions();              break;
-
+    case 'p': wizard_list_props();                   break;
+    case 'y': wizard_identify_all_items();           break;
+    case 'Y': wizard_unidentify_all_items();         break;
     case 'x':
         you.experience = 1 + exp_needed(1 + you.experience_level);
         level_change();
@@ -1943,6 +1967,7 @@ void process_command(command_type cmd)
     case CMD_WAIT:
         you.check_clinging(false);
         you.turn_is_over = true;
+        _extract_manticore_spikes();
         break;
 
     case CMD_PICKUP:
@@ -1985,7 +2010,7 @@ void process_command(command_type cmd)
         break;
 
     case CMD_EVOKE_WIELDED:
-        if (!evoke_item(you.equip[EQ_WEAPON]))
+        if (!evoke_item(you.equip[EQ_WEAPON], true))
             flush_input_buffer(FLUSH_ON_FAILURE);
         break;
 
@@ -2038,6 +2063,10 @@ void process_command(command_type cmd)
     case CMD_CHARACTER_DUMP:
         if (!dump_char(you.your_name))
             mpr("Char dump unsuccessful! Sorry about that.");
+#ifdef USE_TILE_WEB
+        else
+            tiles.send_dump_info("command", you.your_name);
+#endif
         break;
 
         // Travel commands.
@@ -2417,16 +2446,6 @@ static void _decrement_durations()
 
     _decrement_a_duration(DUR_SILENCE, delay, "Your hearing returns.");
 
-    _decrement_a_duration(DUR_REPEL_MISSILES, delay,
-                          "You feel less protected from missiles.",
-                          coinflip(),
-                          "Your repel missiles spell is about to expire...");
-
-    _decrement_a_duration(DUR_DEFLECT_MISSILES, delay,
-                          "You feel less protected from missiles.",
-                          coinflip(),
-                          "Your deflect missiles spell is about to expire...");
-
     if (_decrement_a_duration(DUR_TROGS_HAND, delay,
                               NULL, coinflip(),
                               "You feel the effects of Trog's Hand fading."))
@@ -2636,9 +2655,13 @@ static void _decrement_durations()
     _decrement_a_duration(DUR_STEALTH, delay, "You feel less stealthy.");
     _decrement_a_duration(DUR_SLAYING, delay, "You feel less lethal.");
 
-    if (_decrement_a_duration(DUR_INVIS, delay, "You flicker back into view.",
+    if (_decrement_a_duration(DUR_INVIS, delay, NULL,
                               coinflip(), "You flicker for a moment."))
     {
+        if (you.invisible())
+            mprf(MSGCH_DURATION, "You feel more conspicuous.");
+        else
+            mprf(MSGCH_DURATION, "You flicker back into view.");
         you.attribute[ATTR_INVIS_UNCANCELLABLE] = 0;
     }
 
@@ -2682,6 +2705,10 @@ static void _decrement_durations()
     {
         you.clear_fearmongers();
     }
+
+    _decrement_a_duration(DUR_FROZEN, delay,
+                          "The ice encasing you melts away.",
+                          0, NULL, MSGCH_RECOVERY);
 
     dec_slow_player(delay);
     dec_exhaust_player(delay);
@@ -2968,6 +2995,15 @@ static void _decrement_durations()
 
     _decrement_a_duration(DUR_SICKENING, delay);
 
+    _decrement_a_duration(DUR_SAP_MAGIC, delay,
+                          "Your magic seems less tainted.");
+
+    if (!you.duration[DUR_SAP_MAGIC])
+    {
+        _decrement_a_duration(DUR_MAGIC_SAPPED, delay,
+                              "You feel more in control of your magic.");
+    }
+
     _decrement_a_duration(DUR_ANTIMAGIC, delay,
                           "You regain control over your magic.");
 
@@ -2997,32 +3033,6 @@ static void _decrement_durations()
     }
 
     _decrement_a_duration(DUR_RETCHING, delay, "Your fit of retching subsides.");
-
-    if (you.duration[DUR_SPIRIT_HOWL])
-    {
-        if (you.props.exists("next_spirit_pack")
-            && you.elapsed_time >= you.props["next_spirit_pack"].get_int()
-            && you.duration[DUR_SPIRIT_HOWL] > 185)
-        {
-            int num = spawn_spirit_pack(&you);
-            you.props["next_spirit_pack"].get_int() = you.elapsed_time + 35
-                                                      + random2(60)
-                                                      + (num * num) * 7;
-
-            // If we somehow couldn't spawn any, wait longer than normal
-            // (probably the player is in some place where spawning more isn't
-            // possibly, so let's waste lest time trying)
-            if (num == 0)
-                you.props["next_spirit_pack"].get_int() += 100;
-        }
-        if (_decrement_a_duration(DUR_SPIRIT_HOWL, delay))
-        {
-            mprf(MSGCH_DURATION, "The howling abruptly ceases.");
-            add_daction(DACT_END_SPIRIT_HOWL);
-            you.props["spirit_howl_cooldown"].get_int() =
-                you.elapsed_time + random_range(1500, 3000);
-        }
-    }
 
     if (you.duration[DUR_TOXIC_RADIANCE])
     {
@@ -3054,6 +3064,15 @@ static void _decrement_durations()
 
     _decrement_a_duration(DUR_FIRE_VULN, delay,
                           "You feel less vulnerable to fire.");
+
+    _decrement_a_duration(DUR_POISON_VULN, delay,
+                        "You feel less vulnerable to poison.");
+
+    if (_decrement_a_duration(DUR_PORTAL_PROJECTILE, delay,
+            "You are no longer teleporting projectiles to their destination."))
+    {
+        you.attribute[ATTR_PORTAL_PROJECTILE] = 0;
+    }
 
     dec_elixir_player(delay);
 
@@ -3213,6 +3232,32 @@ static void _update_mold()
     }
 }
 
+// For worn items; weapons do this on melee attacks.
+static void _check_equipment_conducts()
+{
+    if (you_worship(GOD_DITHMENOS) && one_chance_in(10))
+    {
+        bool illuminating = false, fiery = false;
+        const item_def* item;
+        for (int i = EQ_MIN_ARMOUR; i < NUM_EQUIP; i++)
+        {
+            item = you.slot_item(static_cast<equipment_type>(i));
+            if (!item)
+                continue;
+            if (is_illuminating_item(*item))
+                illuminating = true;
+            else if (is_fiery_item(*item))
+                fiery = true;
+            if (illuminating && fiery)
+                break;
+        }
+        if (illuminating)
+            did_god_conduct(DID_ILLUMINATE, 1, true);
+        else if (fiery)
+            did_god_conduct(DID_FIRE, 1, true);
+    }
+}
+
 static void _player_reacts()
 {
     search_around();
@@ -3232,6 +3277,8 @@ static void _player_reacts()
 
     if (player_mutation_level(MUT_DEMONIC_GUARDIAN))
         check_demonic_guardian();
+
+    _check_equipment_conducts();
 
     if (you.unrand_reacts != 0)
         unrand_reacts();
@@ -3482,7 +3529,6 @@ void world_reacts()
 
     handle_time();
     manage_clouds();
-    fume();
     if (env.level_state & LSTATE_GLOW_MOLD)
         _update_mold();
     if (env.level_state & LSTATE_GOLUBRIA)
@@ -3503,8 +3549,8 @@ void world_reacts()
             if (you.num_turns<ZOTDEF_CYCLE_LENGTH && one_chance_in(3))
                 continue;
 
-            if ((you.num_turns % ZOTDEF_CYCLE_LENGTH > ZOTDEF_CYCLE_INTERVAL)
-                && x_chance_in_y((you.num_turns % ZOTDEF_CYCLE_LENGTH), ZOTDEF_CYCLE_LENGTH*3))
+            if (you.num_turns % ZOTDEF_CYCLE_LENGTH > ZOTDEF_CYCLE_INTERVAL
+                && x_chance_in_y(you.num_turns % ZOTDEF_CYCLE_LENGTH, ZOTDEF_CYCLE_LENGTH*3))
             {
                 zotdef_spawn(false);
             }
@@ -4331,6 +4377,16 @@ static void _do_searing_ray()
         end_searing_ray();
 }
 
+static void _extract_manticore_spikes()
+{
+    if (_decrement_a_duration(DUR_BARBS, you.time_taken,
+        "You carefully extract the manticore spikes from your body."))
+    {
+        you.attribute[ATTR_BARBS_MSG] = 0;
+        you.attribute[ATTR_BARBS_POW] = 0;
+    }
+}
+
 // Called when the player moves by walking/running. Also calls attack
 // function etc when necessary.
 static void _move_player(int move_x, int move_y)
@@ -4346,6 +4402,11 @@ static void _move_player(coord_def move)
     bool moving = true;         // used to prevent eventual movement (swap)
     bool swap = false;
 
+    int additional_time_taken = 0; // Extra time independant of movement speed
+
+    ASSERT(!in_bounds(you.pos()) || !cell_is_solid(you.pos())
+           || you.wizmode_teleported_into_rock);
+
     if (you.attribute[ATTR_HELD])
     {
         free_self_from_net();
@@ -4359,6 +4420,7 @@ static void _move_player(coord_def move)
         dungeon_feature_type dangerous = DNGN_FLOOR;
         monster *bad_mons = 0;
         string bad_suff, bad_adj;
+        bool penance = false;
         for (adjacent_iterator ai(you.pos(), false); ai; ++ai)
         {
             if (is_feat_dangerous(grd(*ai)) && !you.can_cling_to(*ai)
@@ -4371,12 +4433,13 @@ static void _move_player(coord_def move)
             {
                 string suffix, adj;
                 monster *mons = monster_at(*ai);
-                if (mons && bad_attack(mons, adj, suffix))
+                if (mons && bad_attack(mons, adj, suffix, penance))
                 {
                     bad_mons = mons;
                     bad_suff = suffix;
                     bad_adj = adj;
-                    break;
+                    if (penance)
+                        break;
                 }
             }
         }
@@ -4402,6 +4465,9 @@ static void _move_player(coord_def move)
             }
             prompt += "?";
 
+            if (penance)
+                prompt += " This could place you under penance!";
+
             monster* targ = monster_at(you.pos() + move);
             if (targ && !targ->wont_attack() && you.can_see(targ))
                 prompt += " (Use ctrl+direction to attack without moving)";
@@ -4426,7 +4492,10 @@ static void _move_player(coord_def move)
         {
             you.walking = move.abs();
             you.turn_is_over = true;
-            mpr("Ouch!");
+            if (you.digging) // no actual damage
+                mpr("You hurt your mandibles, ouch!"), you.digging = false;
+            else
+                mpr("Ouch!");
             apply_berserk_penalty = true;
             crawl_state.cancel_cmd_repeat();
 
@@ -4452,7 +4521,12 @@ static void _move_player(coord_def move)
 
     // You can't walk out of bounds!
     if (!in_bounds(targ))
+    {
+        // Why isn't the border permarock?
+        if (you.digging)
+            mpr("This wall is too hard to dig through.");
         return;
+    }
 
     dungeon_feature_type targ_grid = grd(targ);
 
@@ -4483,6 +4557,29 @@ static void _move_player(coord_def move)
     }
 
     bool targ_pass = you.can_pass_through(targ) && you.form != TRAN_TREE;
+
+    if (you.digging)
+    {
+        if (you.hunger_state == HS_STARVING && !you.is_undead)
+        {
+            you.digging = false;
+            canned_msg(MSG_TOO_HUNGRY);
+        }
+        else if (grd(targ) == DNGN_ROCK_WALL
+                 || grd(targ) == DNGN_CLEAR_ROCK_WALL
+                 || grd(targ) == DNGN_GRATE)
+        {
+            targ_pass = true;
+        }
+        else // moving or attacking ends dig
+        {
+            you.digging = false;
+            if (feat_is_solid(grd(targ)))
+                mpr("You can't dig through that.");
+            else
+                mpr("You retract your mandibles.");
+        }
+    }
 
     // You can swap places with a friendly or good neutral monster if
     // you're not confused, or if both of you are inside a sanctuary.
@@ -4621,6 +4718,16 @@ static void _move_player(coord_def move)
             you.props.erase("water_holder");
         }
 
+        if (you.digging)
+        {
+            mprf("You dig through %s.", feature_description_at(targ, false,
+                 DESC_THE, false).c_str());
+            nuke_wall(targ);
+            noisy(6, you.pos());
+            make_hungry(50, true);
+            additional_time_taken += BASELINE_DELAY / 5;
+        }
+
         if (swap)
             swap_places(targ_monst, mon_swap_dest);
         else if (you.duration[DUR_COLOUR_SMOKE_TRAIL])
@@ -4640,11 +4747,34 @@ static void _move_player(coord_def move)
 
         move_player_to_grid(targ, true, false);
 
+        if (you.duration[DUR_BARBS])
+        {
+            // Always announce the first time they hurt us, otherwise reduce
+            // message spam; hopefully the player has the idea by now.
+            if (!you.attribute[ATTR_BARBS_MSG] || one_chance_in(6))
+            {
+                mpr("The barbed spikes dig painfully into your body as you move.");
+                you.attribute[ATTR_BARBS_MSG] = 1;
+            }
+
+            ouch(roll_dice(2, you.attribute[ATTR_BARBS_POW]), NON_MONSTER,
+                 KILLED_BY_BARBS);
+            bleed_onto_floor(you.pos(), MONS_PLAYER, 2, false);
+
+            // Sometimes decrease duration even when we move.
+            if (one_chance_in(3))
+            {
+                _decrement_a_duration(DUR_BARBS, you.time_taken,
+                    "The manticore spikes snap loose.");
+            }
+        }
+
         if (delay_is_run(current_delay_action()))
             env.travel_trail.push_back(you.pos());
 
         you.time_taken *= player_movement_speed();
         you.time_taken = div_rand_round(you.time_taken, 10);
+        you.time_taken += additional_time_taken;
 
         if (you.running && you.running.travel_speed)
         {

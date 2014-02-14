@@ -98,21 +98,24 @@ enum attack_flavour
     AF_NAPALM,
     AF_CHAOS,
     AF_STEAL,
+#if TAG_MAJOR_VERSION == 34
     AF_STEAL_FOOD,
+#endif
     AF_CRUSH,
     AF_REACH,
     AF_HOLY,
     AF_ANTIMAGIC,
     AF_PAIN,
     AF_ENSNARE,
-    AF_DROWN,
+    AF_ENGULF,
     AF_PURE_FIRE,
     AF_DRAIN_SPEED,
     AF_VULN,
     AF_PLAGUE,
     AF_WEAKNESS_POISON,
     AF_SHADOWSTAB,
-    AF_WATERPORT,
+    AF_DROWN,
+    AF_FIREBRAND,
 };
 
 // Non-spell "summoning" types to give to monster::mark_summoned(), or

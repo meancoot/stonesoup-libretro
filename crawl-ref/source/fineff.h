@@ -33,17 +33,6 @@ protected:
     actor *defender() const { return actor_by_mid(def); }
 };
 
-class lightning_fineff : public final_effect
-{
-public:
-    lightning_fineff(const actor *attack, const coord_def &pos)
-        : final_effect(attack, 0, pos)
-    {
-    }
-    bool mergeable(const final_effect &a) const;
-    void fire();
-};
-
 class mirror_damage_fineff : public final_effect
 {
 public:
@@ -144,6 +133,17 @@ class starcursed_merge_fineff : public final_effect
 public:
     starcursed_merge_fineff(const actor *merger)
             : final_effect(0, merger, coord_def())
+    {
+    }
+    bool mergeable(const final_effect &a) const;
+    void fire();
+};
+
+class shock_serpent_discharge_fineff : public final_effect
+{
+public:
+    shock_serpent_discharge_fineff(const actor *serpent)
+            : final_effect(0, serpent, coord_def())
     {
     }
     bool mergeable(const final_effect &a) const;

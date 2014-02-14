@@ -245,12 +245,14 @@ monster_type fill_out_corpse(const monster* mons,
             corpse_class = mons_zombie_base(mons);
         }
 
-        if (mons && mons_genus(mtype) == MONS_DRACONIAN)
+        if (mons
+            && (mons_genus(mtype) == MONS_DRACONIAN
+                || mons_genus(mtype) == MONS_DEMONSPAWN))
         {
             if (mons->type == MONS_TIAMAT)
                 corpse_class = MONS_DRACONIAN;
             else
-                corpse_class = draco_subspecies(mons);
+                corpse_class = draco_or_demonspawn_subspecies(mons);
         }
 
         if (mons->has_ench(ENCH_GLOWING_SHAPESHIFTER))
@@ -413,7 +415,10 @@ int place_monster_corpse(const monster* mons, bool silent,
     // "always_corpse" forces monsters to always generate a corpse upon
     // their deaths.
     if (mons->props.exists("always_corpse")
-        || mons_class_flag(mons->type, M_ALWAYS_CORPSE))
+        || mons_class_flag(mons->type, M_ALWAYS_CORPSE)
+        || mons_is_demonspawn(mons->type)
+           && mons_class_flag(draco_or_demonspawn_subspecies(mons),
+                              M_ALWAYS_CORPSE))
     {
         vault_forced = true;
     }
@@ -1521,6 +1526,8 @@ static void _make_spectral_thing(monster* mons, bool quiet)
     }
 }
 
+
+
 static bool _mons_reaped(actor *killer, monster* victim);
 
 static bool _reaping(monster *mons)
@@ -1545,7 +1552,9 @@ int monster_die(monster* mons, const actor *killer, bool silent,
     killer_type ktype = KILL_YOU;
     int kindex = NON_MONSTER;
 
-    if (killer->is_monster())
+    if (!killer)
+        ktype = KILL_NONE;
+    else if (killer->is_monster())
     {
         const monster *kmons = killer->as_monster();
         ktype = kmons->confused_by_you() ? KILL_YOU_CONF : KILL_MON;
@@ -1664,12 +1673,15 @@ int monster_die(monster* mons, killer_type killer,
     }
 
     // Kills by the spectral weapon are considered as kills by the player instead
-    if (killer == KILL_MON
+    // Ditto Dithmenos shadow kills.
+    if ((killer == KILL_MON || killer == KILL_MON_MISSILE)
         && !invalid_monster_index(killer_index)
-        && menv[killer_index].type == MONS_SPECTRAL_WEAPON
-        && menv[killer_index].summoner == MID_PLAYER)
+        && ((menv[killer_index].type == MONS_SPECTRAL_WEAPON
+             && menv[killer_index].summoner == MID_PLAYER)
+            || (menv[killer_index].mid == MID_PLAYER)))
     {
-        killer = KILL_YOU;
+        killer = (killer == KILL_MON_MISSILE) ? KILL_YOU_MISSILE
+                                              : KILL_YOU;
         killer_index = you.mindex();
     }
 
@@ -1844,11 +1856,13 @@ int monster_die(monster* mons, killer_type killer,
         end_spectral_weapon(mons, true, killer == KILL_RESET);
         silent = true;
     }
-    else if (mons->type == MONS_ELEMENTAL_WELLSPRING
-             && mons->mindex() == killer_index)
+    else if (mons->type == MONS_GRAND_AVATAR)
     {
         if (!silent)
-            simple_monster_message(mons, " exhausts itself and dries up.");
+        {
+            simple_monster_message(mons, " fades into the ether.",
+                                   MSGCH_MONSTER_DAMAGE, MDAM_DEAD);
+        }
         silent = true;
     }
 
@@ -1935,7 +1949,12 @@ int monster_die(monster* mons, killer_type killer,
             // Prevent summoned creatures from being good kills.
             if (bad_kill || good_kill)
             {
-                if (targ_holy == MH_NATURAL)
+                if (targ_holy == MH_DEMONIC || mons_is_demonspawn(mons->type))
+                {
+                    did_god_conduct(DID_KILL_DEMON,
+                                    mons->hit_dice, true, mons);
+                }
+                else if (targ_holy == MH_NATURAL)
                 {
                     did_god_conduct(DID_KILL_LIVING,
                                     mons->hit_dice, true, mons);
@@ -1955,11 +1974,6 @@ int monster_die(monster* mons, killer_type killer,
                 else if (targ_holy == MH_UNDEAD)
                 {
                     did_god_conduct(DID_KILL_UNDEAD,
-                                    mons->hit_dice, true, mons);
-                }
-                else if (targ_holy == MH_DEMONIC)
-                {
-                    did_god_conduct(DID_KILL_DEMON,
                                     mons->hit_dice, true, mons);
                 }
 
@@ -2022,6 +2036,20 @@ int monster_die(monster* mons, killer_type killer,
                 if (mons->is_holy())
                 {
                     did_god_conduct(DID_KILL_HOLY, mons->hit_dice,
+                                    true, mons);
+                }
+
+                // Dithmenos hates sources of illumination.
+                // (This is *after* the holy so that the right order of
+                //  messages appears.)
+                if (mons_is_illuminating(mons))
+                {
+                    did_god_conduct(DID_KILL_ILLUMINATING, mons->hit_dice,
+                                    true, mons);
+                }
+                else if (mons_is_fiery(mons))
+                {
+                    did_god_conduct(DID_KILL_FIERY, mons->hit_dice,
                                     true, mons);
                 }
             }
@@ -2162,7 +2190,15 @@ int monster_die(monster* mons, killer_type killer,
                         // okay that e.g. Yredelemnul ignores kills done
                         // by confused monsters as opposed to enslaved
                         // or friendly ones. (jpeg)
-                        if (targ_holy == MH_NATURAL)
+                        if (targ_holy == MH_DEMONIC
+                            || mons_is_demonspawn(mons->type))
+                        {
+                            notice |= did_god_conduct(
+                                          !confused ? DID_DEMON_KILLED_BY_UNDEAD_SLAVE :
+                                                      DID_DEMON_KILLED_BY_SERVANT,
+                                          mons->hit_dice);
+                        }
+                        else if (targ_holy == MH_NATURAL)
                         {
                             notice |= did_god_conduct(
                                           !confused ? DID_LIVING_KILLED_BY_UNDEAD_SLAVE :
@@ -2174,13 +2210,6 @@ int monster_die(monster* mons, killer_type killer,
                             notice |= did_god_conduct(
                                           !confused ? DID_UNDEAD_KILLED_BY_UNDEAD_SLAVE :
                                                       DID_UNDEAD_KILLED_BY_SERVANT,
-                                          mons->hit_dice);
-                        }
-                        else if (targ_holy == MH_DEMONIC)
-                        {
-                            notice |= did_god_conduct(
-                                          !confused ? DID_DEMON_KILLED_BY_UNDEAD_SLAVE :
-                                                      DID_DEMON_KILLED_BY_SERVANT,
                                           mons->hit_dice);
                         }
 
@@ -2213,6 +2242,12 @@ int monster_die(monster* mons, killer_type killer,
                     // followers are assumed to come from summoning
                     // spells...  the others are from invocations (TSO,
                     // Makhleb, Kiku). - bwr
+                    else if (targ_holy == MH_DEMONIC
+                             || mons_is_demonspawn(mons->type))
+                    {
+                        notice |= did_god_conduct(DID_DEMON_KILLED_BY_SERVANT,
+                                                  mons->hit_dice);
+                    }
                     else if (targ_holy == MH_NATURAL)
                     {
                         notice |= did_god_conduct(DID_LIVING_KILLED_BY_SERVANT,
@@ -2235,11 +2270,6 @@ int monster_die(monster* mons, killer_type killer,
                     else if (targ_holy == MH_UNDEAD)
                     {
                         notice |= did_god_conduct(DID_UNDEAD_KILLED_BY_SERVANT,
-                                                  mons->hit_dice);
-                    }
-                    else if (targ_holy == MH_DEMONIC)
-                    {
-                        notice |= did_god_conduct(DID_DEMON_KILLED_BY_SERVANT,
                                                   mons->hit_dice);
                     }
 
@@ -2459,6 +2489,14 @@ int monster_die(monster* mons, killer_type killer,
     {
         hogs_to_humans();
     }
+    else if ((mons_is_natasha(mons) || mons_genus(mons->type) == MONS_FELID)
+             && !in_transit && mons_felid_can_revive(mons))
+    {
+        // Like Boris, but her vault can't come back
+        if (mons_is_natasha(mons))
+            you.unique_creatures.set(MONS_NATASHA, false);
+        mons_felid_revive(mons);
+    }
     else if (mons_is_pikel(mons))
     {
         // His slaves don't care if he's dead or not, just whether or not
@@ -2544,10 +2582,10 @@ int monster_die(monster* mons, killer_type killer,
     }
     // Give the treant a last chance to release its wasps if it is killed in a
     // single blow from above half health
-    else if (mons->type == MONS_TREANT && !was_banished
+    else if (mons->type == MONS_SHAMBLING_MANGROVE && !was_banished
              && !mons->pacified() && (!summoned || duration > 0) && !wizard)
     {
-        treant_release_wasps(mons);
+        treant_release_fauna(mons);
     }
     else if (mons_is_mimic(mons->type))
         drop_items = false;
@@ -2596,6 +2634,30 @@ int monster_die(monster* mons, killer_type killer,
                             + roll_dice(2, 8);
         if (pbd_dur > you.duration[DUR_POWERED_BY_DEATH])
             you.set_duration(DUR_POWERED_BY_DEATH, pbd_dur);
+    }
+
+    if (corpse >= 0)
+    {
+        // Powered by death.
+        // Find nearby putrid demonspawn.
+        for (monster_near_iterator mi(mons->pos()); mi; ++mi)
+        {
+            monster* mon = *mi;
+            if (mon->alive()
+                && mons_is_demonspawn(mon->type)
+                && draco_or_demonspawn_subspecies(mon)
+                   == MONS_PUTRID_DEMONSPAWN)
+            {
+                // Rather than regen over time, the expected 24 + 2d8 duration
+                // is given as an instant health bonus.
+                // These numbers may need to be adjusted.
+                if (mon->heal(random2avg(24, 2) + roll_dice(2, 8)))
+                {
+                    simple_monster_message(mon,
+                                           " regenerates before your eyes!");
+                }
+            }
+        }
     }
 
     unsigned int player_exp = 0, monster_exp = 0;
@@ -2884,15 +2946,15 @@ static bool _is_poly_power_unsuitable(poly_power_type power,
     switch (power)
     {
     case PPT_LESS:
-        return (tgt_pow > src_pow - 3 + relax * 3 / 2)
-                || (power == PPT_LESS && (tgt_pow < src_pow - relax / 2));
+        return tgt_pow > src_pow - 3 + relax * 3 / 2
+                || (power == PPT_LESS && tgt_pow < src_pow - relax / 2);
     case PPT_MORE:
-        return (tgt_pow < src_pow + 2 - relax)
-                || (power == PPT_MORE && (tgt_pow > src_pow + relax));
+        return tgt_pow < src_pow + 2 - relax
+                || (power == PPT_MORE && tgt_pow > src_pow + relax);
     default:
     case PPT_SAME:
-        return (tgt_pow < src_pow - relax)
-                || (tgt_pow > src_pow + relax * 3 / 2);
+        return tgt_pow < src_pow - relax
+                || tgt_pow > src_pow + relax * 3 / 2;
     }
 }
 
@@ -4239,13 +4301,17 @@ void seen_monster(monster* mons)
         }
     }
 
-    if (!mons->has_ench(ENCH_ABJ)
-        && !mons->has_ench(ENCH_FAKE_ABJURATION)
-        && !testbits(mons->flags, MF_NO_REWARD)
-        && !mons_class_flag(mons->type, M_NO_EXP_GAIN)
-        && !crawl_state.game_is_arena())
+    if (!(mons->flags & MF_TSO_SEEN))
     {
-        did_god_conduct(DID_SEE_MONSTER, mons->hit_dice, true, mons);
+        if (!mons->has_ench(ENCH_ABJ)
+            && !mons->has_ench(ENCH_FAKE_ABJURATION)
+            && !testbits(mons->flags, MF_NO_REWARD)
+            && !mons_class_flag(mons->type, M_NO_EXP_GAIN)
+            && !crawl_state.game_is_arena())
+        {
+            did_god_conduct(DID_SEE_MONSTER, mons->hit_dice, true, mons);
+        }
+        mons->flags |= MF_TSO_SEEN;
     }
 
     if (mons_allows_beogh(mons))
@@ -4625,6 +4691,9 @@ string summoned_poof_msg(const monster* mons, bool plural)
         {
             msg = "dissolve%s into a puddle of slime";
         }
+
+        if (mons->type == MONS_DROWNED_SOUL)
+            msg = "returns to the deep";
     }
 
     // Conjugate.

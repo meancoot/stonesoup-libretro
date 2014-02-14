@@ -60,6 +60,7 @@
 #include "state.h"
 #include "stuff.h"
 #include "target.h"
+#include "terrain.h"
 #ifdef USE_TILE
  #include "tilepick.h"
 #endif
@@ -392,6 +393,8 @@ int spell_fail(spell_type spell)
     if (player_equip_unrand(UNRAND_HIGH_COUNCIL))
         chance2 += 7;
 
+    chance2 += you.duration[DUR_MAGIC_SAPPED] / BASELINE_DELAY;
+
     // Apply the effects of Vehumet and items of wizardry.
     chance2 = _apply_spellcasting_success_boosts(spell, chance2);
 
@@ -519,6 +522,8 @@ static int _spell_enhancement(unsigned int typeflags)
         enhanced += player_spec_air() - player_spec_earth();
 
     if (you.attribute[ATTR_SHADOWS])
+        enhanced -= 2;
+    if (you.form == TRAN_SHADOW)
         enhanced -= 2;
 
     enhanced += you.archmagi();
@@ -831,7 +836,8 @@ bool cast_a_spell(bool check_range, spell_type spell)
     return true;
 }
 
-static void _spellcasting_side_effects(spell_type spell, int pow, god_type god)
+static void _spellcasting_side_effects(spell_type spell, int pow, god_type god,
+                                       bool real_spell)
 {
     // If you are casting while a god is acting, then don't do conducts.
     // (Presumably Xom is forcing you to cast a spell.)
@@ -866,9 +872,18 @@ static void _spellcasting_side_effects(spell_type spell, int pow, god_type god)
         excommunication();
     }
 
-    // Make some noise if it's actually the player casting.
     if (god == GOD_NO_GOD)
+    {
+        if (you.duration[DUR_SAP_MAGIC] && real_spell)
+        {
+            mprf(MSGCH_WARN, "Your control over your magic is sapped.");
+            you.increase_duration(DUR_MAGIC_SAPPED,
+                                  spell_difficulty(spell),
+                                  100);
+        }
+        // Make some noise if it's actually the player casting.
         noisy(spell_noise(spell), you.pos());
+    }
 
     alert_nearby_monsters();
 }
@@ -1109,6 +1124,8 @@ static targetter* _spell_targetter(spell_type spell, int pow, int range)
         return new targetter_smite(&you, range, 0, 2);
     case SPELL_DAZZLING_SPRAY:
         return new targetter_spray(&you, range, ZAP_DAZZLING_SPRAY);
+    case SPELL_EXPLOSIVE_BOLT:
+        return new targetter_explosive_bolt(&you, pow, range);
     case SPELL_MAGIC_DART:
     case SPELL_FORCE_LANCE:
     case SPELL_SHOCK:
@@ -1180,7 +1197,7 @@ spret_type your_spells(spell_type spell, int powc,
     // targeting.  There are others that do their own that will be
     // missed by this (and thus will not properly ESC without cost
     // because of it).  Hopefully, those will eventually be fixed. - bwr
-    if ((flags & SPFLAG_TARGETING_MASK) && spell != SPELL_PORTAL_PROJECTILE)
+    if (flags & SPFLAG_TARGETING_MASK)
     {
         targ_mode_type targ =
               (testbits(flags, SPFLAG_HELPFUL) ? TARG_FRIEND : TARG_HOSTILE);
@@ -1237,6 +1254,16 @@ spret_type your_spells(spell_type spell, int powc,
                 mpr("Sorry, this spell works on others only.");
             else
                 canned_msg(MSG_UNTHINKING_ACT);
+
+            return SPRET_ABORT;
+        }
+
+        if (spell == SPELL_HASTE && spd.isMe() && you.stasis(false))
+        {
+            if (you.species == SP_FORMICID)
+                mpr("You cannot haste.");
+            else
+                mpr("You cannot haste right now.");
 
             return SPRET_ABORT;
         }
@@ -1316,14 +1343,29 @@ spret_type your_spells(spell_type spell, int powc,
     if (you.props.exists("battlesphere") && allow_fail)
         aim_battlesphere(&you, spell, powc, beam);
 
+    const bool old_target = actor_at(beam.target);
+
     switch (_do_cast(spell, powc, spd, beam, god, potion, check_range, fail))
     {
     case SPRET_SUCCESS:
+    {
         if (you.props.exists("battlesphere") && allow_fail)
             trigger_battlesphere(&you, beam);
-        _spellcasting_side_effects(spell, powc, god);
+        actor* victim = actor_at(beam.target);
+        if (you_worship(GOD_DITHMENOS)
+            && allow_fail
+            && !god_hates_spell(spell, GOD_DITHMENOS, !allow_fail)
+            && (flags & SPFLAG_TARGETING_MASK)
+            && !(flags & SPFLAG_NEUTRAL)
+            && (beam.is_enchantment()
+                || battlesphere_can_mirror(spell))
+            && (!old_target || (victim && !victim->is_player())))
+        {
+            dithmenos_shadow_spell(&beam, spell);
+        }
+        _spellcasting_side_effects(spell, powc, god, allow_fail);
         return SPRET_SUCCESS;
-
+    }
     case SPRET_FAIL:
     {
         if (antimagic)
@@ -1477,15 +1519,12 @@ static spret_type _do_cast(spell_type spell, int powc,
     case SPELL_LRD:
         return cast_fragmentation(powc, &you, spd.target, fail);
 
-    case SPELL_PORTAL_PROJECTILE:
-        return cast_portal_projectile(powc, fail);
-
     // other effects
     case SPELL_DISCHARGE:
         return cast_discharge(powc, fail);
 
     case SPELL_CHAIN_LIGHTNING:
-        return cast_chain_lightning(powc, &you, fail);
+        return cast_chain_spell(SPELL_CHAIN_LIGHTNING, powc, &you, fail);
 
     case SPELL_DISPERSAL:
         return cast_dispersal(powc, fail);
@@ -1503,7 +1542,7 @@ static spret_type _do_cast(spell_type spell, int powc,
         return cast_toxic_radiance(&you, powc, fail);
 
     case SPELL_IGNITE_POISON:
-        return cast_ignite_poison(powc, fail);
+        return cast_ignite_poison(&you, powc, fail);
 
     case SPELL_TORNADO:
         return cast_tornado(powc, fail);
@@ -1513,6 +1552,10 @@ static spret_type _do_cast(spell_type spell, int powc,
 
     case SPELL_DAZZLING_SPRAY:
         return cast_dazzling_spray(&you, powc, target, fail);
+
+    case SPELL_CHAIN_OF_CHAOS:
+        return cast_chain_spell(SPELL_CHAIN_OF_CHAOS, powc, &you, fail);
+
 
     // Summoning spells, and other spells that create new monsters.
     // If a god is making you cast one of these spells, any monsters
@@ -1744,6 +1787,9 @@ static spret_type _do_cast(spell_type spell, int powc,
         return SPRET_ABORT;
 #endif
 
+    case SPELL_PORTAL_PROJECTILE:
+        return cast_portal_projectile(powc, fail);
+
     // other
     case SPELL_BORGNJORS_REVIVIFICATION:
         return cast_revivification(powc, fail);
@@ -1887,10 +1933,10 @@ int failure_rate_colour(spell_type spell)
 //Converts the raw failure rate into a number to be displayed.
 int failure_rate_to_int(int fail)
 {
-    if (fail == 0)
+    if (fail <= 0)
         return 0;
-    else if (fail == 100)
-        return 100;
+    else if (fail >= 100)
+        return (fail + 100)/2;
     else
         return max(1, (int) (100 * _get_true_fail_rate(fail)));
 }

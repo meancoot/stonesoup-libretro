@@ -17,6 +17,7 @@
 #include "mon-util.h"
 #include "monster.h"
 #include "options.h"
+#include "religion.h"
 #include "show.h"
 #include "stash.h"
 #include "state.h"
@@ -128,7 +129,7 @@ static unsigned short _cell_feat_show_colour(const map_cell& cell,
             if (cell.flags & MAP_SILENCED)
                 colour = BLUE; // Silence gets darker
             else
-                colour = ETC_DEATH; // If no holy or silence
+                colour = MAGENTA; // If no holy or silence
         }
         else if (cell.flags & MAP_SILENCED)
             colour = CYAN; // Silence but no holy/unholy
@@ -175,8 +176,13 @@ static monster_type _show_mons_type(const monster_info& mi)
 
 static int _get_mons_colour(const monster_info& mi)
 {
-    if (crawl_state.viewport_monster_hp) // show hp directly on the monster
+    // Show hp directly on the monster, except for irrelevant ones.
+    // Fedhas worshippers might be interested in their plants however.
+    if (crawl_state.viewport_monster_hp
+        && (you_worship(GOD_FEDHAS) || !mons_class_is_firewood(mi.type)))
+    {
         return dam_colour(mi) | COLFLAG_ITEM_HEAP;
+    }
 
     int col = mi.colour;
 

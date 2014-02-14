@@ -362,8 +362,9 @@ Esta lança leve foi projetada para ser arremessada e causar muito dano.
 large rock
 
 Uma pedra muito grande e muito pesada. {{
-    if string.find(you.race(), "Ogre")
+    if you.race() == "Ogre"
        or you.race() == "Troll"
+       or you.race() == "Formicid"
    then
        return ""
    else
@@ -556,10 +557,6 @@ Um dispositivo mágico capaz de imobilizar uma criatura.
 whip
 
 Um chicote.
-%%%%
-wizard hat
-
-Um chapéu de tecido cônico.
 %%%%
 young poisoner's handbook
 

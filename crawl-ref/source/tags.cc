@@ -32,6 +32,7 @@
 #include "art-enum.h"
 #include "artefact.h"
 #include "branch.h"
+#include "colour.h"
 #include "coord.h"
 #include "coordit.h"
 #include "describe.h"
@@ -1032,14 +1033,42 @@ static void _add_missing_branches()
         _ensure_entry(BRANCH_ZOT);
     if (lc == level_id(BRANCH_DEPTHS, 2) || lc == level_id(BRANCH_DUNGEON, 21))
         _ensure_entry(BRANCH_VESTIBULE);
-
-    // The remaining branch entries close once the orb is taken.
-    if (you.char_direction == GDT_ASCENDING)
-        return;
     if (lc == level_id(BRANCH_DEPTHS, 3) || lc == level_id(BRANCH_DUNGEON, 24))
         _ensure_entry(BRANCH_PANDEMONIUM);
     if (lc == level_id(BRANCH_DEPTHS, 4) || lc == level_id(BRANCH_DUNGEON, 25))
         _ensure_entry(BRANCH_ABYSS);
+    if (player_in_branch(BRANCH_VESTIBULE))
+    {
+        for (rectangle_iterator ri(0); ri; ++ri)
+        {
+            if (grd(*ri) == DNGN_STONE_ARCH)
+            {
+                map_marker *marker = env.markers.find(*ri, MAT_FEATURE);
+                if (marker)
+                {
+                    map_feature_marker *featm =
+                        dynamic_cast<map_feature_marker*>(marker);
+                    // [ds] Ensure we're activating the correct feature
+                    // markers. Feature markers are also used for other
+                    // things, notably to indicate the return point from
+                    // a labyrinth or portal vault.
+                    switch (featm->feat)
+                    {
+                    case DNGN_ENTER_COCYTUS:
+                    case DNGN_ENTER_DIS:
+                    case DNGN_ENTER_GEHENNA:
+                    case DNGN_ENTER_TARTARUS:
+                        grd(*ri) = featm->feat;
+                        dprf("opened %s", dungeon_feature_name(featm->feat));
+                        env.markers.remove(marker);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 #endif
 
@@ -1101,7 +1130,10 @@ static void _shunt_monsters_out_of_walls()
     for (int i = 0; i < MAX_MONSTERS; ++i)
     {
         monster &m(menv[i]);
-        if (m.alive() && in_bounds(m.pos()) && cell_is_solid(m.pos()))
+        if (m.alive() && in_bounds(m.pos()) && cell_is_solid(m.pos())
+            && (grd(m.pos()) != DNGN_MALIGN_GATEWAY
+                || mons_genus(m.type) != MONS_ELDRITCH_TENTACLE))
+        {
             for (distance_iterator di(m.pos()); di; ++di)
                 if (!actor_at(*di) && !cell_is_solid(*di))
                 {
@@ -1118,6 +1150,7 @@ static void _shunt_monsters_out_of_walls()
                     env.mgrid(*di) = i;
                     break;
                 }
+        }
     }
 }
 
@@ -1392,6 +1425,14 @@ static void tag_construct_you(writer &th)
     marshallByte(th, NUM_OBJECT_CLASSES);
     for (j = 0; j < NUM_OBJECT_CLASSES; ++j)
         marshallInt(th, you.sacrifice_value[j]);
+
+    // Event timers.
+    marshallByte(th, NUM_TIMERS);
+    for (j = 0; j < NUM_TIMERS; ++j)
+    {
+        marshallInt(th, you.last_timer_effect[j]);
+        marshallInt(th, you.next_timer_effect[j]);
+    }
 
     // how many mutations/demon powers?
     marshallShort(th, NUM_MUTATIONS);
@@ -2241,6 +2282,14 @@ static void tag_read_you(reader &th)
             else if (a >= 50)
                 a += 1000 - 50;
         }
+        if (th.getMinorVersion() < TAG_MINOR_ABIL_GOD_FIXUP)
+        {
+            if (a >= ABIL_ASHENZARI_END_TRANSFER + 1
+                && a <= ABIL_ASHENZARI_END_TRANSFER + 3)
+            {
+                a += ABIL_STOP_RECALL - ABIL_ASHENZARI_END_TRANSFER;
+            }
+        }
         if (a == ABIL_FLY
             || a == ABIL_WISP_BLINK // was ABIL_FLY_II
                && th.getMinorVersion() < TAG_MINOR_0_12)
@@ -2385,6 +2434,26 @@ static void tag_read_you(reader &th)
     for (j = count; j < NUM_OBJECT_CLASSES; ++j)
         you.sacrifice_value[j] = 0;
 
+    int timer_count = 0;
+#if TAG_MAJOR_VERSION == 34
+    if (th.getMinorVersion() >= TAG_MINOR_EVENT_TIMERS)
+    {
+#endif
+    timer_count = unmarshallByte(th);
+    ASSERT(timer_count <= NUM_TIMERS);
+    for (j = 0; j < timer_count; ++j)
+    {
+        you.last_timer_effect[j] = unmarshallInt(th);
+        you.next_timer_effect[j] = unmarshallInt(th);
+    }
+#if TAG_MAJOR_VERSION == 34
+    }
+    else
+        timer_count = 0;
+#endif
+    // We'll have to fix up missing/broken timer entries after
+    // we unmarshall you.elapsed_time.
+
     // how many mutations/demon powers?
     count = unmarshallShort(th);
     ASSERT_RANGE(count, 0, NUM_MUTATIONS + 1);
@@ -2528,9 +2597,24 @@ static void tag_read_you(reader &th)
     for (i = 0; i < count; i++)
         you.piety_max[i] = unmarshallByte(th);
     count = unmarshallByte(th);
+#if TAG_MAJOR_VERSION == 34
+    if (th.getMinorVersion() < TAG_MINOR_NEMELEX_DUNGEONS)
+    {
+        for (i = 0; i < NEM_GIFT_SUMMONING; i++)
+            you.nemelex_sacrificing.set(i, unmarshallBoolean(th));
+        unmarshallBoolean(th); // dungeons weight
+        for (i = NEM_GIFT_SUMMONING; i < NUM_NEMELEX_GIFT_TYPES; i++)
+            you.nemelex_sacrificing.set(i, unmarshallBoolean(th));
+    }
+    else
+    {
+#endif
     ASSERT(count == NUM_NEMELEX_GIFT_TYPES);
     for (i = 0; i < count; i++)
         you.nemelex_sacrificing.set(i, unmarshallBoolean(th));
+#if TAG_MAJOR_VERSION == 34
+    }
+#endif
 
     you.gift_timeout   = unmarshallByte(th);
 
@@ -2550,6 +2634,35 @@ static void tag_read_you(reader &th)
     // elapsed time
     you.elapsed_time   = unmarshallInt(th);
     you.elapsed_time_at_last_input = you.elapsed_time;
+
+    // Initialize new timers now that we know the time.
+    const int last_20_turns = you.elapsed_time - (you.elapsed_time % 200);
+    for (j = timer_count; j < NUM_TIMERS; ++j)
+    {
+        you.last_timer_effect[j] = last_20_turns;
+        you.next_timer_effect[j] = last_20_turns + 200;
+    }
+
+    // Verify that timers aren't scheduled for the past.
+    for (j = 0; j < NUM_TIMERS; ++j)
+    {
+        if (you.next_timer_effect[j] < you.elapsed_time)
+        {
+#if TAG_MAJOR_VERSION == 34
+            if (th.getMinorVersion() >= TAG_MINOR_EVENT_TIMERS
+                && th.getMinorVersion() < TAG_MINOR_EVENT_TIMER_FIX)
+            {
+                dprf("Fixing up timer %d from %d to %d",
+                     j, you.next_timer_effect[j], last_20_turns + 200);
+                you.last_timer_effect[j] = last_20_turns;
+                you.next_timer_effect[j] = last_20_turns + 200;
+            }
+            else
+#endif
+            die("Timer %d next trigger in the past [%d < %d]",
+                j, you.next_timer_effect[j], you.elapsed_time);
+        }
+    }
 
     // time of character creation
     you.birth_time = unmarshallInt(th);
@@ -3722,13 +3835,19 @@ void marshallMonsterInfo(writer &th, const monster_info& mi)
 #if TAG_MAJOR_VERSION == 34
     marshallUnsigned(th, mi.type);
     marshallUnsigned(th, mi.base_type);
-    if (mons_genus(mi.type) == MONS_DRACONIAN)
+    if (mons_genus(mi.type) == MONS_DRACONIAN
+        || mons_genus(mi.type) == MONS_DEMONSPAWN)
+    {
         marshallUnsigned(th, mi.draco_type);
+    }
 #else
     marshallShort(th, mi.type);
     marshallShort(th, mi.base_type);
-    if (mons_genus(mi.type) == MONS_DRACONIAN)
+    if (mons_genus(mi.type) == MONS_DRACONIAN
+        || mons_genus(mi.type) == MONS_DEMONSPAWN)
+    {
         marshallShort(th, mi.draco_type);
+    }
 #endif
     marshallUnsigned(th, mi.number);
     marshallUnsigned(th, mi.colour);
@@ -3743,6 +3862,14 @@ void marshallMonsterInfo(writer &th, const monster_info& mi)
     marshallInt(th, mi.mresists);
     marshallUnsigned(th, mi.mitemuse);
     marshallByte(th, mi.mbase_speed);
+    marshallByte(th, mi.menergy.move);
+    marshallByte(th, mi.menergy.swim);
+    marshallByte(th, mi.menergy.attack);
+    marshallByte(th, mi.menergy.missile);
+    marshallByte(th, mi.menergy.spell);
+    marshallByte(th, mi.menergy.special);
+    marshallByte(th, mi.menergy.item);
+    marshallByte(th, mi.menergy.pickup_percent);
     marshallUnsigned(th, mi.fly);
     for (unsigned int i = 0; i <= MSLOT_LAST_VISIBLE_SLOT; ++i)
     {
@@ -3777,14 +3904,26 @@ void unmarshallMonsterInfo(reader &th, monster_info& mi)
     mi.type = unmarshallMonType_Info(th);
     ASSERT(!invalid_monster_type(mi.type));
     mi.base_type = unmarshallMonType_Info(th);
-    if (mons_genus(mi.type) == MONS_DRACONIAN)
+    if (mons_genus(mi.type) == MONS_DEMONSPAWN
+        && th.getMinorVersion() < TAG_MINOR_DEMONSPAWN)
+    {
+        mi.draco_type = mi.base_type;
+    }
+    else if (mons_genus(mi.type) == MONS_DRACONIAN
+        || (mons_genus(mi.type) == MONS_DEMONSPAWN
+            && th.getMinorVersion() >= TAG_MINOR_DEMONSPAWN))
+    {
         mi.draco_type = unmarshallMonType_Info(th);
+    }
 #else
     mi.type = unmarshallMonType(th);
     ASSERT(!invalid_monster_type(mi.type));
     mi.base_type = unmarshallMonType(th);
-    if (mons_genus(mi.type) == MONS_DRACONIAN)
+    if (mons_genus(mi.type) == MONS_DRACONIAN
+        || mons_genus(mi.type) == MONS_DEMONSPAWN)
+    {
         mi.draco_type = unmarshallMonType(th);
+    }
 #endif
     unmarshallUnsigned(th, mi.number);
     unmarshallUnsigned(th, mi.colour);
@@ -3817,7 +3956,7 @@ void unmarshallMonsterInfo(reader &th, monster_info& mi)
         switch (mi.base_speed())
         {
         case 10:
-            mi.type = MONS_ELEMENTAL_WELLSPRING;
+            mi.type = MONS_GHOST; // wellspring
             break;
         case 12:
             mi.type = MONS_POLYMOTH;
@@ -3830,6 +3969,98 @@ void unmarshallMonsterInfo(reader &th, monster_info& mi)
             die("Unexpected monster_info with type %d and speed %d",
                 mi.type, mi.base_speed());
         }
+    }
+
+    // As above; this could be one of several monsters.
+    if (th.getMinorVersion() < TAG_MINOR_DEMONSPAWN
+        && mi.type >= MONS_MONSTROUS_DEMONSPAWN
+        && mi.type <= MONS_SALAMANDER_MYSTIC)
+    {
+        switch (mi.colour)
+        {
+        case BROWN:        // monstrous demonspawn, naga ritualist
+            if (mi.spells[0] == SPELL_FORCE_LANCE)
+                mi.type = MONS_NAGA_RITUALIST;
+            else
+                mi.type = MONS_MONSTROUS_DEMONSPAWN;
+            break;
+        case BLUE:         // gelid demonspawn
+            mi.type = MONS_GELID_DEMONSPAWN;
+            break;
+        case RED:          // infernal demonspawn
+            mi.type = MONS_INFERNAL_DEMONSPAWN;
+            break;
+        case GREEN:        // putrid demonspawn
+            mi.type = MONS_PUTRID_DEMONSPAWN;
+            break;
+        case LIGHTGRAY:    // torturous demonspawn, naga sharpshooter
+            if (mi.spells[0] == SPELL_PORTAL_PROJECTILE)
+                mi.type = MONS_NAGA_SHARPSHOOTER;
+            else
+                mi.type = MONS_TORTUROUS_DEMONSPAWN;
+            break;
+        case LIGHTBLUE:    // blood saint, shock serpent
+            if (mi.base_type != MONS_NO_MONSTER)
+                mi.type = MONS_BLOOD_SAINT;
+            else
+                mi.type = MONS_SHOCK_SERPENT;
+            break;
+        case ETC_RANDOM:   // chaos champion
+            mi.type = MONS_CHAOS_CHAMPION;
+            break;
+        case LIGHTCYAN:    // warmonger, drowned soul
+            if (mi.base_type != MONS_NO_MONSTER)
+                mi.type = MONS_WARMONGER;
+            else
+                mi.type = MONS_DROWNED_SOUL;
+            break;
+        case LIGHTGREEN:   // corrupter
+            mi.type = MONS_CORRUPTER;
+            break;
+        case LIGHTMAGENTA: // black sun
+            mi.type = MONS_BLACK_SUN;
+            break;
+        case CYAN:         // worldbinder
+            mi.type = MONS_WORLDBINDER;
+            break;
+        case MAGENTA:      // vine stalker, mana viper, grand avatar
+            if (mi.base_speed() == 30)
+                mi.type = MONS_GRAND_AVATAR;
+            else
+                mi.type = MONS_MANA_VIPER;
+            break;
+        case WHITE:        // salamander firebrand
+            mi.type = MONS_SALAMANDER_FIREBRAND;
+            break;
+        case YELLOW:       // salamander mystic
+            mi.type = MONS_SALAMANDER_MYSTIC;
+            break;
+        default:
+            die("Unexpected monster with type %d and colour %d",
+                mi.type, mi.colour);
+        }
+        if (mons_is_demonspawn(mi.type)
+            && mons_species(mi.type) == MONS_DEMONSPAWN
+            && mi.type != MONS_DEMONSPAWN)
+        {
+            ASSERT(mi.base_type != MONS_NO_MONSTER);
+        }
+    }
+
+    if (th.getMinorVersion() < TAG_MINOR_MONINFO_ENERGY)
+        mi.menergy = mons_class_energy(mi.type);
+    else
+    {
+#endif
+    mi.menergy.move = unmarshallByte(th);
+    mi.menergy.swim = unmarshallByte(th);
+    mi.menergy.attack = unmarshallByte(th);
+    mi.menergy.missile = unmarshallByte(th);
+    mi.menergy.spell = unmarshallByte(th);
+    mi.menergy.special = unmarshallByte(th);
+    mi.menergy.item = unmarshallByte(th);
+    mi.menergy.pickup_percent = unmarshallByte(th);
+#if TAG_MAJOR_VERSION == 34
     }
 #endif
 
@@ -4311,7 +4542,7 @@ void unmarshallMonster(reader &th, monster& m)
         case 6: case 7: // slowed
         case 10:
         case 15: // hasted/berserked
-            m.type = MONS_ELEMENTAL_WELLSPRING;
+            m.type = MONS_GHOST; // wellspring
             break;
         case 8: // slowed
         case 12:
@@ -4349,6 +4580,97 @@ void unmarshallMonster(reader &th, monster& m)
              && th.getMinorVersion() < TAG_MINOR_CHIMERA_GHOST_DEMON)
     {
         // Don't unmarshall the ghost demon if this is an invalid chimera
+    }
+    else if (th.getMinorVersion() < TAG_MINOR_DEMONSPAWN
+             && m.type >= MONS_MONSTROUS_DEMONSPAWN
+             && m.type <= MONS_SALAMANDER_MYSTIC)
+    {
+        // The demonspawn-enemies branch was merged in such a fashion
+        // that it bumped several monster enums (see merge commit:
+        // 0.14-a0-2321-gdab6825).
+        // Try to figure out what it is.
+        switch (m.colour)
+        {
+        case BROWN:        // monstrous demonspawn, naga ritualist
+            if (m.spells[0] == SPELL_FORCE_LANCE)
+                m.type = MONS_NAGA_RITUALIST;
+            else
+                m.type = MONS_MONSTROUS_DEMONSPAWN;
+            break;
+        case BLUE:         // gelid demonspawn
+            m.type = MONS_GELID_DEMONSPAWN;
+            break;
+        case RED:          // infernal demonspawn
+            m.type = MONS_INFERNAL_DEMONSPAWN;
+            break;
+        case GREEN:        // putrid demonspawn
+            m.type = MONS_PUTRID_DEMONSPAWN;
+            break;
+        case LIGHTGRAY:    // torturous demonspawn, naga sharpshooter
+            if (m.spells[0] == SPELL_PORTAL_PROJECTILE)
+                m.type = MONS_NAGA_SHARPSHOOTER;
+            else
+                m.type = MONS_TORTUROUS_DEMONSPAWN;
+            break;
+        case LIGHTBLUE:    // blood saint, shock serpent
+            if (m.base_monster != MONS_NO_MONSTER)
+                m.type = MONS_BLOOD_SAINT;
+            else
+                m.type = MONS_SHOCK_SERPENT;
+            break;
+        case ETC_RANDOM:   // chaos champion
+            m.type = MONS_CHAOS_CHAMPION;
+            break;
+        case LIGHTCYAN:    // warmonger, drowned soul
+            if (m.base_monster != MONS_NO_MONSTER)
+                m.type = MONS_WARMONGER;
+            else
+                m.type = MONS_DROWNED_SOUL;
+            break;
+        case LIGHTGREEN:   // corrupter
+            m.type = MONS_CORRUPTER;
+            break;
+        case LIGHTMAGENTA: // black sun
+            m.type = MONS_BLACK_SUN;
+            break;
+        case CYAN:         // worldbinder
+            m.type = MONS_WORLDBINDER;
+            break;
+        case MAGENTA:      // vine stalker, mana viper, grand avatar
+            switch (m.speed)
+            {
+                case 20:
+                case 30:
+                case 45:
+                    m.type = MONS_GRAND_AVATAR;
+                    break;
+                case 9:
+                case 10:
+                case 14:
+                case 21:
+                    m.type = MONS_MANA_VIPER;
+                    break;
+                default:
+                    die("Unexpected monster with type %d and speed %d",
+                        m.type, m.speed);
+            }
+            break;
+        case WHITE:        // salamander firebrand
+            m.type = MONS_SALAMANDER_FIREBRAND;
+            break;
+        case YELLOW:       // salamander mystic
+            m.type = MONS_SALAMANDER_MYSTIC;
+            break;
+        default:
+            die("Unexpected monster with type %d and colour %d",
+                m.type, m.colour);
+        }
+        if (mons_is_demonspawn(m.type)
+            && mons_species(m.type) == MONS_DEMONSPAWN
+            && m.type != MONS_DEMONSPAWN)
+        {
+            ASSERT(m.base_monster != MONS_NO_MONSTER);
+        }
     }
     else
 #endif

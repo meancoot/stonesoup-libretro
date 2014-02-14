@@ -162,7 +162,7 @@ COLOUR: BLACK
 ####################### First come the old fixed arts.
 
 NAME:    Singing Sword
-OBJ:     OBJ_WEAPONS/WPN_LONG_SWORD
+OBJ:     OBJ_WEAPONS/WPN_BASTARD_SWORD
 PLUS:    +7/+7
 COLOUR:  ETC_GOLD
 TILE:    spwpn_singing_sword
@@ -351,7 +351,7 @@ BOOL:    life, seeinv
 
 NAME:    demon blade "Leech"
 OBJ:     OBJ_WEAPONS/WPN_DEMON_BLADE
-PLUS:    +13/+4
+PLUS:    +13/+1
 COLOUR:  ETC_DARK
 TILE:    urand_leech
 TILE_EQ: leech
@@ -522,15 +522,15 @@ MAGIC:    60
 AC:       5
 BOOL:     elec
 
-# TAG_MAJOR_VERSION == 34
-NAME:    crossbow "Sniper"
-OBJ:     OBJ_WEAPONS/WPN_CROSSBOW
-PLUS:    +10/+0
-COLOUR:  ETC_DARK
-TILE:    urand_sniper
-TILE_EQ: sniper
-BRAND:   SPWPN_VENOM
-BOOL:    seeinv, nogen
+NAME:     crossbow "Sniper"
+OBJ:      OBJ_WEAPONS/WPN_CROSSBOW
+PLUS:     +15/+15
+COLOUR:   ETC_DARK
+TILE:     urand_sniper
+TILE_EQ:  sniper
+BASE_DELAY: +5
+BRAND:    SPWPN_VORPAL
+BOOL:     seeinv
 
 NAME:    longbow "Piercer"
 OBJ:     OBJ_WEAPONS/WPN_LONGBOW
@@ -595,7 +595,6 @@ TILE:     urand_undeadhunter
 TILE_EQ:  undeadhunter
 BOOL:     life
 
-# TAG_MAJOR_VERSION == 34
 NAME:    whip "Snakebite"
 OBJ:     OBJ_WEAPONS/WPN_WHIP
 PLUS:    +5/+10
@@ -603,7 +602,7 @@ COLOUR:  DARKGREY
 TILE:    urand_snakebite
 TILE_EQ: snakebite
 BRAND:   SPWPN_VENOM
-BOOL:    poison, tilerim, nogen
+BOOL:    poison, tilerim
 
 # TAG_MAJOR_VERSION == 34
 NAME:     knife of Accuracy
@@ -675,6 +674,7 @@ DAM:      -3
 STEALTH:  60
 BOOL:     seeinv, fog
 
+# TAG_MAJOR_VERSION == 34
 NAME:    large shield "Bullseye"
 OBJ:     OBJ_ARMOUR/ARM_LARGE_SHIELD
 PLUS:    +15
@@ -682,9 +682,10 @@ COLOUR:  RED
 TILE:    urand_bullseye
 TILE_EQ: shield_bullseye
 EV:      -5
+BOOL:    nogen
 
 NAME:    crown of Dyrovepreva
-OBJ:     OBJ_ARMOUR/ARM_CAP
+OBJ:     OBJ_ARMOUR/ARM_HAT
 PLUS:    +3
 COLOUR:  ETC_JEWEL
 TILE:    urand_dyrovepreva
@@ -694,7 +695,7 @@ METAB:   1
 BOOL:    elec, seeinv
 
 NAME:     hat of the Bear Spirit
-OBJ:      OBJ_ARMOUR/ARM_CAP
+OBJ:      OBJ_ARMOUR/ARM_HAT
 PLUS:     +2
 COLOUR:   DARKGREY
 TILE:     urand_bear
@@ -750,7 +751,7 @@ PLUS:    +4
 COLOUR:  BROWN
 TILE:    urand_zhor
 TILE_EQ: zhor
-COLD:    2
+COLD:    3
 
 ENUM:    SALAMANDER
 NAME:    salamander hide armour
@@ -805,7 +806,7 @@ BOOL:    nospell, notelep, cursed
 
 ENUM:    DRAGONMASK
 NAME:    mask of the Dragon
-OBJ:     OBJ_ARMOUR/ARM_CAP
+OBJ:     OBJ_ARMOUR/ARM_HAT
 COLOUR:  ETC_SHIMMER_BLUE
 TILE:    urand_dragonmask
 TILE_EQ: art_dragonhelm
@@ -833,7 +834,7 @@ TILE_EQ: dragonarm_gold
 MAGIC:   50
 
 NAME:    hat of the Alchemist
-OBJ:     OBJ_ARMOUR/ARM_WIZARD_HAT
+OBJ:     OBJ_ARMOUR/ARM_HAT
 PLUS:    +2
 COLOUR:  LIGHTMAGENTA
 TILE:    urand_alchemist
@@ -875,10 +876,11 @@ BOOL:     life, poison
 
 NAME:     shield of the gong
 OBJ:      OBJ_ARMOUR/ARM_SHIELD
-PLUS:     +6
+PLUS:     +27
 COLOUR:   ETC_GOLD
 TILE:     urand_gong
 TILE_EQ:  shield_gong
+EV:       -5
 MAGIC:    50
 BOOL:     elec, life
 
@@ -962,7 +964,7 @@ TILE_EQ:  robe_clouds
 BOOL:     elec, fly
 
 NAME:     hat of Pondering
-OBJ:      OBJ_ARMOUR/ARM_WIZARD_HAT
+OBJ:      OBJ_ARMOUR/ARM_HAT
 PLUS:     +3
 COLOUR:   LIGHTRED
 TILE:     urand_pondering
@@ -1109,13 +1111,33 @@ BRAND:    SPWPN_VORPAL
 ENUM:    HIGH_COUNCIL
 NAME:    hat of the High Council
 INSCRIP: Wiz-
-OBJ:     OBJ_ARMOUR/ARM_WIZARD_HAT
+OBJ:     OBJ_ARMOUR/ARM_HAT
 COLOUR:  LIGHTGREEN
 TILE:    urand_high_council
 TILE_EQ: wizard_lightgreen
 PLUS:    +2
 BRAND:   SPARM_ARCHMAGI
 STEALTH: -20
+
+NAME:     arc blade
+INSCRIP:  discharge,
+OBJ:      OBJ_WEAPONS/WPN_CUTLASS
+PLUS:     +3/+5
+COLOUR:   ETC_ELECTRICITY
+TILE:     urand_arc_blade
+TILE_EQ:  arc_blade
+BOOL:     elec
+
+ENUM:     SPELLBINDER
+NAME:     demon whip "Spellbinder"
+OBJ:      OBJ_WEAPONS/WPN_DEMON_WHIP
+BRAND:    SPWPN_ANTIMAGIC
+PLUS:     +3/+6
+COLOUR:   ETC_ENCHANT
+TILE:     urand_spellbinder
+TILE_EQ:  spellbinder
+MAGIC:    30
+BOOL:     evil
 
 # This is the first of two amulets used to test suppression aura.
 # Together, they confer every randart effect except for a few that are

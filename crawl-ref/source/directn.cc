@@ -2513,6 +2513,9 @@ static bool _find_monster_expl(const coord_def& where, int mode, bool need_path,
 static bool _find_feature(const coord_def& where, int mode,
                            bool /* need_path */, int /* range */, targetter*)
 {
+    if (!map_bounds(where))
+        return false;
+
     // The stair need not be in LOS if the square is mapped.
     if (!you.see_cell(where) && !env.map_knowledge(where).seen())
         return false;
@@ -3241,6 +3244,8 @@ static string _base_feature_desc(dungeon_feature_type grid, trap_type trap)
         return "snail-covered altar of Cheibriados";
     case DNGN_ALTAR_ASHENZARI:
         return "shattered altar of Ashenzari";
+    case DNGN_ALTAR_DITHMENOS:
+        return "shadowy altar of Dithmenos";
 
     case DNGN_FOUNTAIN_BLUE:
         return "fountain of clear blue water";
@@ -3415,8 +3420,11 @@ string feature_description_at(const coord_def& where, bool covering,
             dtype = DESC_THE;
         // fallthrough
     default:
+        const string featdesc = grid == grd(where)
+                              ? raw_feature_description(where)
+                              : _base_feature_desc(grid, get_trap_type(where));
         return thing_do_grammar(dtype, add_stop, feat_is_trap(grid),
-                   raw_feature_description(where) + covering_description);
+                                featdesc + covering_description);
     }
 }
 
@@ -3503,7 +3511,7 @@ static vector<string> _get_monster_behaviour_vector(const monster_info& mi)
     if (mi.is(MB_SLEEPING) || mi.is(MB_DORMANT))
         descs.push_back(mi.is(MB_CONFUSED) ? "sleepwalking" : "resting");
     else if (mi.is(MB_FLEEING))
-        descs.push_back("retreating");
+        descs.push_back("fleeing");
     else if (mi.attitude == ATT_HOSTILE && (mi.is(MB_UNAWARE) || mi.is(MB_WANDERING)))
         descs.push_back("hasn't noticed you");
 
@@ -3566,6 +3574,9 @@ static vector<string> _get_monster_desc_vector(const monster_info& mi)
                                               DESC_A, false));
     }
 
+    if (mi.type == MONS_SHOCK_SERPENT && mi.number == 5)
+        descs.push_back("bristling with violent electricity");
+
     return descs;
 }
 
@@ -3591,7 +3602,7 @@ static string _get_monster_desc(const monster_info& mi)
     }
     // Applies to both friendlies and hostiles
     else if (mi.is(MB_FLEEING))
-        text += pronoun + " is retreating.\n";
+        text += pronoun + " is fleeing.\n";
     // hostile with target != you
     else if (mi.attitude == ATT_HOSTILE && (mi.is(MB_UNAWARE) || mi.is(MB_WANDERING)))
         text += pronoun + " doesn't appear to have noticed you.\n";
@@ -3620,7 +3631,7 @@ static string _get_monster_desc(const monster_info& mi)
         text += pronoun + " is illuminated by a divine halo.\n";
 
     if (mi.is(MB_UMBRAED))
-        text += pronoun + " is wreathed by an unholy umbra.\n";
+        text += pronoun + " is wreathed by an umbra.\n";
 
     if (mi.intel() <= I_INSECT)
         text += pronoun + " is mindless.\n";

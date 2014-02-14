@@ -14,6 +14,7 @@
 #include "database.h"
 #include "env.h"
 #include "fineff.h"
+#include "fprop.h"
 #include "items.h"
 #include "libutil.h"
 #include "mapmark.h"
@@ -67,7 +68,7 @@ void pikel_band_neutralise()
             visible_slaves++;
         }
     }
-    const char* final_msg = "";
+    const char* final_msg = nullptr;
     if (visible_slaves == 1)
         final_msg = "With Pikel's spell broken, the former slave thanks you for freedom.";
     else if (visible_slaves > 1)
@@ -129,7 +130,7 @@ void hogs_to_humans()
             human++;
     }
 
-    const char* final_msg = "";
+    const char* final_msg = nullptr;
 
     if (any == 1)
     {
@@ -404,6 +405,65 @@ void elven_twins_unpacify(monster* twin)
         return;
 
     behaviour_event(mons, ME_WHACK, &you, you.pos(), false);
+}
+
+bool mons_is_natasha(const monster* mons)
+{
+    return mons->type == MONS_NATASHA
+           || (mons->props.exists("original_name")
+               && mons->props["original_name"].get_string() == "Natasha");
+}
+
+bool mons_felid_can_revive(const monster* mons)
+{
+    return !mons->props.exists("felid_revives")
+           || mons->props["felid_revives"].get_byte() < 2;
+}
+
+void mons_felid_revive(monster* mons)
+{
+    // Mostly adapted from bring_to_safety()
+    coord_def revive_place;
+    int tries = 0;
+    while (tries < 10000) // Don't try too hard.
+    {
+        revive_place.x = random2(GXM);
+        revive_place.y = random2(GYM);
+        if (!in_bounds(revive_place)
+            || grd(revive_place) != DNGN_FLOOR
+            || env.cgrid(revive_place) != EMPTY_CLOUD
+            || monster_at(revive_place)
+            || env.pgrid(revive_place) & FPROP_NO_TELE_INTO
+            || distance2(revive_place, mons->pos()) < dist_range(10))
+        {
+            tries++;
+            continue;
+        }
+        else
+            break;
+    }
+
+    // XXX: this will need to be extended if we get more types of enemy
+    // felids
+    monster_type type = (mons_is_natasha(mons)) ? MONS_NATASHA
+                                                : MONS_FELID;
+    monsterentry* me = get_monster_data(type);
+    ASSERT(me);
+
+    const int revives = (mons->props.exists("felid_revives"))
+                        ? mons->props["felid_revives"].get_int() + 1
+                        : 1;
+
+    const int hd = me->hpdice[0] - revives;
+
+    monster *newmons =
+        create_monster(
+            mgen_data(type, SAME_ATTITUDE(mons), 0, 0, 0, revive_place,
+            mons->foe, 0, GOD_NO_GOD, MONS_NO_MONSTER, 0, BLACK,
+            PROX_ANYWHERE, level_id::current(), hd));
+
+    if (newmons)
+        newmons->props["felid_revives"].get_byte() = revives;
 }
 
 /**

@@ -301,10 +301,6 @@ bool check_awaken(monster* mons)
     if (you.berserk())
         return true;
 
-    // Vigilant monsters are always alerted
-    if (mons_class_flag(mons->type, M_VIGILANT))
-        return true;
-
     // I assume that creatures who can sense invisible are very perceptive.
     int mons_perc = 10 + (mons_intel(mons) * 4) + mons->hit_dice
                        + mons_sense_invis(mons) * 5;
@@ -618,7 +614,7 @@ void check_monsters_sense(sense_type sense, int range, const coord_def& where)
 {
     for (monster_iterator mi; mi; ++mi)
     {
-        if (distance2(mi->pos(), where))
+        if (distance2(mi->pos(), where) > range)
             continue;
 
         switch (sense)
@@ -674,8 +670,8 @@ void check_monsters_sense(sense_type sense, int range, const coord_def& where)
                     else
                     {
                         mi->add_ench(mon_enchant(ENCH_BATTLE_FRENZY, 1, 0, dur));
-                        simple_monster_message(*mi, " is consumed with "
-                                                    "blood-lust!");
+                        simple_monster_message(*mi, " goes into a frenzy at the "
+                                                    "smell of blood!");
                     }
                 }
             }

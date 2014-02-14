@@ -28,7 +28,8 @@
 # Note that all boolean options (i.e. values of 'true' or 'false') have
 # their non-default value commented out. You can toggle these by just
 # uncommenting.
-# Options with several values, e.g. drop_mode = (multi | single),
+# Options with several values, e.g.
+#   confirm_butcher = (auto | always | never),
 # usually have the first value as default.
 #
 # The options for monster glyphs and item colours don't matter for Tiles.
@@ -86,8 +87,8 @@
 # chunks_autopickup = false
 # assign_item_slot = (forward | backward)
 #
-# drop_mode = (multi | single)
 # pickup_menu = false
+# pickup_menu_limit = 4
 # drop_filter += skeleton, corpse, useless_item
 # default_friendly_pickup = (none | friend | player | all)
 
@@ -219,7 +220,7 @@
 # clear_messages             = true
 # small_more                 = true
 # show_more                  = false
-# show_inventory_weights     = true
+# show_inventory_weights     = false
 # item_stack_summary_minimum = 5
 # msg_condense_repeats   = false
 # msg_condense_short     = false
@@ -230,16 +231,16 @@
 #
 # Food is colour coded by default as follows:
 #
-#   yellow     = preferred food                    ($preferred)
-#   darkgrey   = cannot be eaten at all            ($inedible)
-#   lightred   = causes rot                        ($rot-inducing)
-#   magenta    = dangerous to use, mutagenic       ($dangerous, $mutagenic)
-#   red        = considered "evil" by your deity   ($evil)
-#   lightgreen = poisonous                         ($poisonous)
-#   brown      = contaminated, may cause nausea    ($contaminated)
+#   yellow     = preferred food
+#   darkgrey   = cannot be eaten at all
+#   lightred   = causes rot
+#   magenta    = dangerous to use, mutagenic
+#   red        = considered "evil" by your deity
+#   lightgreen = poisonous
+#   brown      = contaminated, may cause nausea
 #
 # You can change colours by using something like
-# $contaminated := magenta
+# menu_colour ^= magenta:contaminated
 
 # You can redefine inventory items like this:
 # menu_colour ^= inventory:magenta:shillelagh
@@ -249,10 +250,10 @@
 # Colouring of messages
 # Messages are colour coded as follows:
 #
-#   lightred   = really important messages  ($danger)
-#   yellow     = significant messages       ($warning)
-#   lightred   = item damaged/destroyed     ($item_dmg [same as $danger])
-#   darkgrey   = boring, message clutter    ($boring)
+#   lightred   = really important messages
+#   yellow     = significant messages
+#   lightred   = item damaged/destroyed
+#   darkgrey   = boring, message clutter
 #
 
 # Notes also use, quite misnamed, menu_colour:
@@ -445,6 +446,9 @@
 #
 # Alternative vi bindings for Dvorak users.
 # include = dvorak_command_keys.txt
+#
+# Alternative vi bindings for Colemak users.
+# include = colemak_command_keys.txt
 #
 # Override the vi movement keys with a non-command.
 # include = no_vi_command_keys.txt

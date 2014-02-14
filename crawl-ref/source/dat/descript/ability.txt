@@ -84,12 +84,12 @@ you to fall to your death.
 %%%%
 Jump Attack ability
 
-An ability that borrows a creature's kinetic energy to power a high-speed melee
-jump attack, landing you safely nearby. You cannot jump over flying enemies and
-can only leap giant enemies submerged in lava or deep water. Standing or
-swimming in water, lava, or liquefied ground will also prevent you from using
-this ability. Felids are natural jumpers and will become more skilled at
-pouncing upon reaching experience levels 6 and 12.
+Leap at a nearby enemy and perform a melee attack, landing somewhere adjacent
+to the target. You cannot jump over flying enemies and can only leap giant
+enemies submerged in lava or deep water. Standing or swimming in water, lava,
+or liquefied ground will also prevent you from using this ability. Felids are
+natural jumpers and will become more skilled at pouncing upon reaching
+experience levels 6 and 12.
 %%%%
 Hellfire ability
 
@@ -118,7 +118,9 @@ At the permanent loss of one magic point recharge a wand or rod.
 %%%%
 Dig ability
 
-Tunnels through rock walls in a straight line. Noisy.
+Allows making tunnels through soft rock and rusted grates. Using this
+ability merely states your intent to dig, to actually tunnel you need to
+move into a wall. Doing so is obviously slower than walking.
 %%%%
 Shaft Self ability
 
@@ -158,11 +160,10 @@ Evoke Flight ability
 %%%%
 Evoke Jump Attack ability
 
-An ability that borrows a creature's kinetic energy to power a high-speed melee
-jump attack, landing you safely nearby. You cannot jump over flying enemies and
-can only leap giant enemies submerged in lava or deep water. Standing or
-swimming in water, lava, or liquefied ground will also prevent you from using
-this ability.
+Leap at a nearby enemy and perform a melee attack, landing somewhere adjacent
+to the target. You cannot jump over flying enemies and can only leap giant
+enemies submerged in lava or deep water. Standing or swimming in water, lava,
+or liquefied ground will also prevent you from using this ability.
 %%%%
 Stop Flying ability
 
@@ -590,6 +591,22 @@ Sacrifice part of one of your skills to improve another.
 End Transfer Knowledge ability
 
 Abort an ongoing skill transfer.
+%%%%
+# Dithmenos
+Shadow Step ability
+
+If a creature within your umbra is still enough for you to focus on its shadow,
+this ability allows you to step through that shadow to immediately be placed
+adjacent to that creature.
+%%%%
+Shadow Form ability
+
+This invocation greatly amplifies your affinity for the darkness, transforming
+you into a swirling mass of dark shadows. While in this form, you are
+permanently invisible and are immune to poison, draining, unholy torment, and
+hostile enchantments; all incoming damage is halved, and you bleed smoke on all
+incoming attacks. However, your ability to deal damage in melee is halved, and
+your spellcasting power is greatly hampered.
 %%%%
 Renounce Religion ability
 

@@ -1939,10 +1939,10 @@ COLOUR:  qQ = darkgray
 FTILE:   qQ = floor_rough_darkgray
 MARKER:  q = lua:fog_machine {cloud_type = "freezing vapour", \
              pow_min = 9, pow_max = 10, delay = 20, size_min = 1, size_max = 1, \
-             start_clouds = 1, excl_rad = -1 }
+             start_clouds = 1, excl_rad = 0 }
 MARKER:  Q = lua:fog_machine {cloud_type = "flame", \
              pow_min = 9, pow_max = 10, delay = 20, size_min = 1, size_max = 1, \
-             start_clouds = 1, excl_rad = -1 }
+             start_clouds = 1, excl_rad = 0 }
 :  if you.depth() == dgn.br_depth(you.branch()) then
 SUBST:  { = {([<
 :  else
@@ -1996,10 +1996,10 @@ COLOUR:  fF = darkgray
 FTILE:   fF = floor_rough_darkgray
 MARKER:  f = lua:fog_machine {cloud_type = "freezing vapour", \
              pow_min = 9, pow_max = 10, delay = 20, size_min = 1, size_max = 1, \
-             start_clouds = 1, excl_rad = -1 }
+             start_clouds = 1, excl_rad = 0 }
 MARKER:  F = lua:fog_machine {cloud_type = "flame", \
              pow_min = 9, pow_max = 10, delay = 20, size_min = 1, size_max = 1, \
-             start_clouds = 1, excl_rad = -1 }
+             start_clouds = 1, excl_rad = 0 }
 MAP
       XXXX...&&.
       Xllvv......
@@ -2066,10 +2066,10 @@ COLOUR:  fF = darkgray
 FTILE:   fF = floor_rough_darkgray
 MARKER:  f = lua:fog_machine {cloud_type = "freezing vapour", \
              pow_min = 9, pow_max = 10, delay = 2, size_min = 1, size_max = 1, \
-             start_clouds = 1, excl_rad = -1 }
+             start_clouds = 1, excl_rad = 0 }
 MARKER:  F = lua:fog_machine {cloud_type = "flame", \
              pow_min = 9, pow_max = 10, delay = 2, size_min = 1, size_max = 1, \
-             start_clouds = 1, excl_rad = -1 }
+             start_clouds = 1, excl_rad = 0 }
 MAP
             ...!..
            ........
@@ -2318,6 +2318,42 @@ xxxxxGxxxxxxcww...wwcxxxxxxGxxxxxxcww...wwcx
            xxccwwwccxx           xxccwwwccxx
             xxcccccxx             xxcccccxx
              xxxxxxx               xxxxxxx
+ENDMAP
+
+NAME:    hangedman_zot_diagonal_lockstep
+TAGS:    transparent extra decor
+DEPTH:   Zot
+ITEM:    % no_pickup
+KFEAT:   Z = known zot trap
+SHUFFLE: ABCDEFG, defg / hijk / mnop / qrst, defg, hjik, mnop
+SUBST:   A : xbvcZ, B : xbvc, C : xxbvc, D : xxbvc, EFG = x
+SUBST:   d : xxZ, h = x, e : xx., i : xx., f : x.., j : x.., m : x..
+SUBST:   gknopqrst = .
+:  if you.depth() == dgn.br_depth(you.branch()) then
+SUBST:  { = {([ <:5 Z:5
+:  elseif you.depth() == "1" then
+SUBST:  { = {:40 })]> d:20 Z:20
+:  else
+SUBST:  { = {([<})]> d:20 Z:20
+:  end
+MAP
+             Dq...iC
+        .....rD...Ch..
+        .......x.x...p
+        ...mF...x...o.
+       Es..F...x.x....
+ ......tE.x..kx...x..eB
+ ........x...Cj....x.xd
+A..fB...x.x.....G...x..
+.A.xg.nG...{...Gn.gx.A.
+..x...G.....x.x...Bf..A
+dx.x....jC...x........
+Be..x...Ck..x.Et......
+ ....x.x...F..sE
+ .o...x...Fm...
+ p...x.x.......
+ ..hC...Dr.....
+   Ci...qD
 ENDMAP
 
 ##############################################################################

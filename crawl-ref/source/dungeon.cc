@@ -1396,7 +1396,7 @@ void fixup_misplaced_items()
     for (int i = 0; i < MAX_ITEMS; i++)
     {
         item_def& item(mitm[i]);
-        if (!item.defined() || (item.pos.x == 0)
+        if (!item.defined() || item.pos.x == 0
             || item.held_by_monster())
         {
             continue;
@@ -1433,18 +1433,11 @@ void fixup_misplaced_items()
     }
 }
 
-static bool _at_top_of_branch()
-{
-    return your_branch().exit_stairs != NUM_FEATURES
-           && you.depth == 1
-           && player_in_connected_branch();
-}
-
 static void _fixup_branch_stairs()
 {
     // Top level of branch levels - replaces up stairs with stairs back to
     // dungeon or wherever:
-    if (_at_top_of_branch())
+    if (you.depth == 1)
     {
 #ifdef DEBUG_DIAGNOSTICS
         int count = 0;
@@ -1572,7 +1565,11 @@ static bool _fixup_stone_stairs(bool preserve_vault_stairs)
             num_stairs = num_up_stairs;
             replace = DNGN_FLOOR;
             base = DNGN_STONE_STAIRS_UP_I;
-            needed_stairs = _at_top_of_branch() ? 1 : 3;
+            // Pan abuses stair placement for transits, as we want connectivity
+            // checks.
+            needed_stairs = you.depth == 1
+                            && !player_in_branch(BRANCH_PANDEMONIUM)
+                            ? 1 : 3;
         }
         else
         {
@@ -2461,6 +2458,10 @@ static void _build_dungeon_level(dungeon_feature_type dest_stairs_type)
         _post_vault_build();
     }
 
+    // Translate stairs for pandemonium levels.
+    if (player_in_branch(BRANCH_PANDEMONIUM))
+        _fixup_pandemonium_stairs();
+
     _fixup_branch_stairs();
     fixup_misplaced_items();
 
@@ -2474,10 +2475,6 @@ static void _build_dungeon_level(dungeon_feature_type dest_stairs_type)
     {
         _prepare_water();
     }
-
-    // Translate stairs for pandemonium levels.
-    if (player_in_branch(BRANCH_PANDEMONIUM))
-        _fixup_pandemonium_stairs();
 
     if (player_in_hell())
         _fixup_hell_stairs();
@@ -2717,6 +2714,7 @@ static bool _builder_by_type()
     {
         dgn_build_labyrinth_level();
         // Labs placed their minivaults already
+        _fixup_branch_stairs();
         return false;
     }
     else if (player_in_branch(BRANCH_ABYSS))
@@ -3673,7 +3671,7 @@ static int _place_uniques()
 }
 
 static void _place_aquatic_in(vector<coord_def> &places, const pop_entry *pop,
-                              int level)
+                              int level, bool allow_zombies)
 {
     if (places.size() < 50)
         return;
@@ -3697,8 +3695,9 @@ static void _place_aquatic_in(vector<coord_def> &places, const pop_entry *pop,
         if (mons_class_primary_habitat(mon) == HT_LAND)
             mg.flags |= MG_PATROLLING;
 
-        if (player_in_hell() &&
-            mons_class_can_be_zombified(mg.cls))
+        if (allow_zombies
+            && player_in_hell()
+            && mons_class_can_be_zombified(mg.cls))
         {
             static const monster_type lut[3] =
                 { MONS_SKELETON, MONS_ZOMBIE, MONS_SIMULACRUM };
@@ -3744,8 +3743,10 @@ static void _place_aquatic_monsters()
             lava.push_back(*ri);
     }
 
-    _place_aquatic_in(water, fish_population(you.where_are_you, false), level);
-    _place_aquatic_in(lava, fish_population(you.where_are_you, true), level);
+    _place_aquatic_in(water, fish_population(you.where_are_you, false), level,
+                      true);
+    _place_aquatic_in(lava, fish_population(you.where_are_you, true), level,
+                      false);
 }
 
 // For Crypt, adds a bunch of skeletons and zombies that do not respect
@@ -4799,7 +4800,7 @@ monster* dgn_place_monster(mons_spec &mspec, coord_def where,
         mg.colour = random_monster_colour();
 
     if (!force_pos && monster_at(where)
-        && (mg.cls < NUM_MONSTERS || mg.cls == RANDOM_MONSTER))
+        && (mg.cls < NUM_MONSTERS || needs_resolution(mg.cls)))
     {
         const monster_type habitat_target =
             mg.cls == RANDOM_MONSTER ? MONS_BAT : mg.cls;
@@ -6434,7 +6435,7 @@ static bool _fixup_interlevel_connectivity()
         }
     }
 
-    const int up_region_max = _at_top_of_branch() ? 1 : 3;
+    const int up_region_max = you.depth == 1 ? 1 : 3;
 
     // Ensure all up stairs were found.
     for (int i = 0; i < up_region_max; i++)

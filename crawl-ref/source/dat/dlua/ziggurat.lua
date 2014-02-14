@@ -200,17 +200,19 @@ local function mset_if(condition, ...)
   mset(unpack(util.map(util.curry(spec_if, condition), { ... })))
 end
 
-mset(with_props("place:Lair:$ w:85 / catoblepas w:6 / dire elephant w:6 / " ..
-                "hellephant w:3", { weight = 5 }),
-     with_props("place:Shoals:$ w:125 / merfolk aquamancer /  " ..
+mset(with_props("place:Lair:$ w:165 / dire elephant w:12 / " ..
+                "catoblepas w:12 / hellephant w:6 / spriggan druid w:1 / " ..
+                "guardian serpent w:1 / deep troll shaman w:1 / " ..
+                "raiju w:1 / hell beast w:1", { weight = 5 }),
+     with_props("place:Shoals:$ w:125 / merfolk aquamancer / water nymph w:5 / " ..
                 "merfolk impaler w:5 / merfolk javelineer", { weight = 5 }),
      "place:Spider:$ w:115 / ghost moth w:15 / red wasp / " ..
                 "orb spider",
-     "place:Crypt:$ w:250 / curse skull w:5 / profane servitor w:5 / " ..
+     "place:Crypt:$ w:260 / curse skull w:5 / profane servitor w:5 / " ..
                 "bone dragon / ancient lich / revenant",
      "place:Forest:$ w:180 / satyr / tengu reaver w:5 / " ..
                 "spriggan defender w:5",
-     "place:Abyss:$",
+     "place:Abyss:$ w:1990 / corrupter",
      with_props("place:Slime:$", { jelly_protect = true }),
      with_props("place:Coc:$ w:460 / Ice Fiend / " ..
                  "blizzard demon w:30", { weight = 5 }),
@@ -220,25 +222,39 @@ mset(with_props("place:Lair:$ w:85 / catoblepas w:6 / dire elephant w:6 / " ..
                  "dancing weapon / iron dragon w:20", { weight = 5 }),
      with_props("place:Tar:$ w:460 / Shadow Fiend / " ..
                  "curse toe / shadow demon w:20", { weight = 5 }),
-     with_props("daeva / angel / cherub / pearl dragon / shedu band / ophan / " ..
-                "apis / w:5 phoenix / w:5 silver star", { weight = 2 }),
+     with_props("daeva / angel / cherub / pearl dragon / shedu band / " ..
+                "ophan / apis / w:5 phoenix / w:5 silver star", { weight = 2 }),
      with_props("hill giant / cyclops / stone giant / fire giant / " ..
                 "frost giant / ettin / titan", { weight = 2 }),
      with_props("fire elemental / fire drake / hell hound / efreet / " ..
                 "fire dragon / fire giant / orb of fire", { weight = 2 }),
      with_props("ice beast / freezing wraith / ice dragon / " ..
-                "frost giant / ice devil / ice fiend / simulacrum w:20 / " ..
-                "blizzard demon", { weight = 2 }),
+                "frost giant / ice devil / ice fiend / simulacrum / " ..
+                "white draconian knight / blizzard demon", { weight = 2 }),
      with_props("insubstantial wisp / air elemental / titan / raiju / " ..
-                "storm dragon / electric golem / spriggan air mage", { weight = 2 }),
+                "storm dragon / electric golem / spriggan air mage / " ..
+                "shock serpent", { weight = 2 }),
+     with_props("spectral thing / shadow wraith / eidolon w:4 / shadow dragon / " ..
+                "deep elf death mage w:6 / deep dwarf death knight w:4 / " ..
+                "revenant w:4 / profane servitor w:6 / soul eater / " ..
+                "shadow fiend / black sun", { weight = 2 }),
      with_props("swamp drake / fire drake / wind drake w:2 / death drake / " ..
-                "wyvern / hydra / steam dragon / mottled dragon / " ..
+                "wyvern w:5 / hydra w:5 / steam dragon / mottled dragon / " ..
                 "swamp dragon / fire dragon / ice dragon / storm dragon / " ..
                 "iron dragon / shadow dragon / quicksilver dragon / " ..
                 "golden dragon", { weight = 2 }),
      with_props("centaur / yaktaur / centaur warrior / yaktaur captain / " ..
-                "cyclops / stone giant / faun w:1 / satyr w:2 / thorn hunter w:2 / " ..
-                "merfolk javelineer / deep elf master archer", { weight = 2 }))
+                "cyclops / stone giant / faun w:1 / satyr w:2 / " ..
+                "thorn hunter w:2 / naga sharpshooter / " ..
+                "merfolk javelineer / deep elf master archer", { weight = 2 }),
+     with_props("wizard / necromancer / ogre mage w:5 / orc sorcerer w:5 / " ..
+                "naga mage / naga ritualist w:5 / salamander mystic w:5 / " ..
+                "greater naga / tengu conjurer / tengu reaver / " ..
+                "spriggan air mage w:5 / merfolk aquamancer w:5 / " ..
+                "deep elf conjurer / deep elf annihilator / " ..
+                "deep elf sorcerer / draconian scorcher w:5 / " ..
+                "draconian knight w:5 / draconian annihilator w:5 / " ..
+                "lich w:3 / ancient lich w:2 / blood saint", { weight = 2 }))
 
 -- spec_fn can be used to wrap a function that returns a monster spec.
 -- This is useful if you want to adjust monster weights in the spec
@@ -292,7 +308,7 @@ mset(spec_fn(function ()
                return "chaos spawn w:" .. d .. " / ugly thing w:" .. d ..
                  " / very ugly thing w:5 / apocalypse crab w:5 / " ..
                  "shapeshifter hd:16 w:" ..e .. " / glowing shapeshifter w:" .. e ..
-                 " / killer klown / pandemonium lord w:" .. f
+                 " / killer klown w:8 / chaos champion w:2 / pandemonium lord w:" .. f
              end))
 
 mset(spec_fn(function ()
@@ -301,12 +317,12 @@ mset(spec_fn(function ()
              end))
 
 local pan_lord_fn = zig_monster_fn("pandemonium lord")
-local pan_critter_fn = zig_monster_fn("place:Pan / greater demon w:5")
+local pan_critter_fn = zig_monster_fn("place:Pan / greater demon / nonbase demonspawn w:4")
 
 local function mons_panlord_gen(x, y, nth)
   if nth == 1 then
     local d = math.max(1, you.depth() - 11)
-    dgn.set_random_mon_list("place:Pan / greater demon w:5")
+    dgn.set_random_mon_list("place:Pan / greater demon / nonbase demonspawn w:4")
     return pan_lord_fn(x, y)
   else
     return pan_critter_fn(x, y)
@@ -314,6 +330,13 @@ local function mons_panlord_gen(x, y, nth)
 end
 
 mset_if(depth_ge(8), mons_panlord_gen)
+mset_if(depth_ge(14), with_props("place:Snake:$ w:14 / place:Swamp:$ w:14 / " ..
+                      "place:Shoals:$ w:14 / place:Spider:$ w:14 / " ..
+                      "greater naga w:12 / guardian serpent w:8 / hydra w:5 / " ..
+                      "swamp dragon w:5 / tentacled monstrosity / " ..
+                      "merfolk aquamancer w:6 / merfolk javelineer w:8 / " ..
+                      "alligator snapping turtle w:6 / ghost moth w:8 / " ..
+                      "emperor scorpion w:8 / moth of wrath w:4", { weight = 5 }))
 
 function ziggurat_monster_creators()
   return util.map(monster_creator_fn, mons_populations)

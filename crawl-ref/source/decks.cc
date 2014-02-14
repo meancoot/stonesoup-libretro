@@ -113,6 +113,7 @@ const deck_archetype deck_of_emergency[] =
     { CARD_SOLITUDE,   {5, 5, 5} },
     { CARD_WARPWRIGHT, {5, 5, 5} },
     { CARD_FLIGHT,     {5, 5, 5} },
+    { CARD_ALCHEMIST,  {5, 5, 5} },
     END_OF_DECK
 };
 
@@ -168,7 +169,7 @@ const deck_archetype deck_of_wonders[] =
     { CARD_WILD_MAGIC, {5, 5, 5} },
     { CARD_HELIX,      {5, 5, 5} },
     { CARD_SAGE,       {5, 5, 5} },
-    { CARD_ALCHEMIST,  {5, 5, 5} },
+    { CARD_TROWEL,     {0, 0, 3} },
     END_OF_DECK
 };
 
@@ -2896,34 +2897,33 @@ bool recruit_mercenary(int mid)
 static void _alchemist_card(int power, deck_rarity_type rarity)
 {
     const int power_level = _get_power_level(power, rarity);
-    const int orig_gold = you.gold;
-    int gold_available = min(you.gold, random2avg(100, 2) * (1 + power_level));
+    const int gold_max = min(you.gold, random2avg(100, 2) * (1 + power_level));
+    int gold_used = 0;
 
-    you.del_gold(gold_available);
-    dprf("%d gold available to spend.", gold_available);
+    dprf("%d gold available to spend.", gold_max);
 
     // Spend some gold to regain health.
-    int hp = min(gold_available / 3, you.hp_max - you.hp);
+    int hp = min((gold_max - gold_used) / 3, you.hp_max - you.hp);
     if (hp > 0)
     {
+        you.del_gold(hp * 2);
         inc_hp(hp);
-        gold_available -= hp * 2;
+        gold_used += hp * 2;
         mpr("You feel better.");
-        dprf("Gained %d health, %d gold remaining.", hp, gold_available);
+        dprf("Gained %d health, %d gold remaining.", hp, gold_max - gold_used);
     }
     // Maybe spend some more gold to regain magic.
-    int mp = min(gold_available / 5, you.max_magic_points - you.magic_points);
+    int mp = min((gold_max - gold_used) / 5,
+                 you.max_magic_points - you.magic_points);
     if (mp > 0 && x_chance_in_y(power_level + 1, 5))
     {
+        you.del_gold(hp * 5);
         inc_mp(mp);
-        gold_available -= mp * 5;
+        gold_used += mp * 5;
         mpr("You feel your power returning.");
-        dprf("Gained %d magic, %d gold remaining.", mp, gold_available);
+        dprf("Gained %d magic, %d gold remaining.", mp, gold_max - gold_used);
     }
 
-    // Add back any remaining gold.
-    you.add_gold(gold_available);
-    const int gold_used = orig_gold - you.gold;
     if (gold_used > 0)
         mprf("%d of your gold pieces vanish!", gold_used);
     else

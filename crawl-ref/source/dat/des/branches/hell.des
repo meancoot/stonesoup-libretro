@@ -28,6 +28,33 @@ function hell_entry_tier(e, tier)
         end
     end
 end
+
+function hell_water_abbrev(e, type, baseweight)
+    return "patrolling " .. type .. " zombie w:" .. math.floor(baseweight/2) ..
+        " / patrolling " .. type .. " skeleton w:" .. math.floor(baseweight/3) ..
+        " / patrolling " .. type .. " simulacrum w:" .. math.floor(baseweight/6)
+end
+
+function hell_water_spawns(e)
+    e.kmons("P = " .. hell_water_abbrev(_G, "spiny frog", 150) ..
+               " / " .. hell_water_abbrev(_G, "alligator", 120) ..
+               " / " .. hell_water_abbrev(_G, "anaconda", 130) ..
+               " / " .. hell_water_abbrev(_G, "hydra", 230) ..
+               "/ kraken zombie w:25 / kraken simulacrum w:12 \
+                / patrolling water elemental w:113")
+    e.kfeat("Pw = w")
+    e.kmask("wW = no_monster_gen")
+    e.nsubst("w = 8:P / 4 = Pw / *:w")
+end
+
+function hell_lava_spawns(e)
+    e.kmons("~ = patrolling molten gargoyle w:5 / patrolling smoke demon w:5 / \
+                 patrolling fire elemental w:60 / \
+                 patrolling salamander firebrand w:30")
+    e.kfeat("~l = l")
+    e.kmask("l = no_monster_gen")
+    e.nsubst("l = 6:~ / 4 = ~l / *:l")
+end
 }}
 
 ##############################################################################
@@ -376,101 +403,91 @@ xx....cccc....xx
     x@xxxx@x
 ENDMAP
 
+####
+# A couple of Dis-inspired mini-entries; total weight 14.
+NAME: grunt_hell_entry_dis_old
+TAGS: transparent nolayout_encompass
+WEIGHT: 4
+MONS: iron imp / nothing
+KMONS: O = iron devil
+: hell_entry_feature(_G, 'O')
+MAP
+...................
+.vvvv.........vvvv.
+.v%.vvvvvvvvvvv.%v.
+.v.1+$%vvvvv$%+1.v.
+.vv+vvvv...vvvv+vv.
+..v....+.1.+....v..
+..v+vvvv...vvvv.v..
+..v....vv+vv.%v.v..
+..v..vOvv.vv.vv.v..
+..v....vv.vv....v..
+.vv+v..vv.vvvvv+vv.
+.v.1vvvvv.vvvvv1.v.
+.v%.vvvvv+vvvvv.%v.
+.vvvv.........vvvv.
+.........@.........
+ENDMAP
+
+NAME: grunt_hell_entry_dis_mu
+TAGS: transparent nolayout_encompass
+WEIGHT: 5
+MONS: iron imp / nothing
+KMONS: O = iron devil
+: hell_entry_feature(_G, 'O')
+: hell_entry_tier(_G, "low")
+MAP
+...................
+..vvvvvvv.vvv......
+..v$v$v$vvv$vvv....
+.vv+v+v1+.+1vvvvv..
+.v....vvv.vvv...vv.
+.v1vvvvv...v.vvv.v.
+.v.+.1.+.1.+.vO+1v.
+.v1vvvvv...v.vvv.v.
+.v....vvv+vvv...vv.
+.vv+v+vvv.vvvvvvv..
+..v$v$v.v.vvvvv....
+..vvvvv.v+v........
+.........@.........
+ENDMAP
+
+NAME: grunt_hell_entry_dis_grunt
+TAGS: transparent nolayout_encompass
+WEIGHT: 5
+MONS: iron imp / nothing
+KMONS: O = iron devil
+: hell_entry_feature(_G, 'O')
+: hell_entry_tier(_G, "low")
+MAP
+...................
+...................
+...vvvvvvvvv...vvv.
+...v.+1v$v1vv.vv1v.
+...v1v+v+vv.vvv.vv.
+.v+v.v.v1vvv...vv..
+.+1+.v1+.+1+.%.v...
+.v+v.v.v1vvv...vv..
+...v1v+v+vv.vvv.vv.
+...v.+1v$vOvv.vv1v.
+...vvvvvvvvv...vvv.
+...................
+.........@.........
+ENDMAP
+
 ##############################################################################
 # Vestibule of Hell and Geryon
 ##############################################################################
 
 default-depth:
 
-#########################################################################
-# The ancient map.
-#
-NAME:   vestibule_of_hell
-PLACE:  Hell
-ORIENT: encompass
-TAGS:   no_rotate no_dump
-MARKER: D=feat:enter_dis
-MARKER: G=feat:enter_gehenna
-MARKER: C=feat:enter_cocytus
-MARKER: T=feat:enter_tartarus
-SUBST:  D=A, G=A, C=A, T=A
-MONS:   Geryon
-: if crawl.one_chance_in(4) then
-MONS:   Murray
-NSUBST: . = 1:2 / *:.
-: end
-FTILE:  +'T = floor_infernal_blank
-TILE:   c = dngn_stone_dark
-MAP
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxvvvvvvvxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx..v'''''v..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxx.....v'''''v.....xxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxx........v'''''v........xxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxx..........v''D''v..........xxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxx............v'''''v............xxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxx.............v'''''v.............xxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxx..............vvv+vvv..............xxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxx.....................................xxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxx.......................................xxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxx.........................................xxxxxxxxxxxxxxx
-xxxxxxxxxxxxx...........................................xxxxxxxxxxxxxx
-xxxxxxxxxxxx.............................................xxxxxxxxxxxxx
-xxxxxxxxxxx...............................................xxxxxxxxxxxx
-xxxxxxxxxx.................................................xxxxxxxxxxx
-xxxxxxxxx...................................................xxxxxxxxxx
-xxxxxxxx.....................................................xxxxxxxxx
-xxxxxxxx.....................................................xxxxxxxxx
-xxxxxxx.......................................................xxxxxxxx
-xxxxxxx.......................................................xxxxxxxx
-xxxxxx.........................................................xxxxxxx
-xxxxxx............................{......................cccc..xxxxxxx
-xxxxxx...................................................ccccccccxxxxx
-xxxxx...l.l..............................................cccc'''cxxxxx
-xxxxx..l.l.l.l.............................................c''''cxxxxx
-xxxxx.l.l.l.l.l............................................c''''cxxxxx
-xxxx.l.l.l.l.l.............................................c'''ccccxxx
-xxxxl.l.l.l.l.l............................................+'''c''ccxx
-xxxx.l.l.l.G.l.l.................<1<.......................+'''+'T'cxx
-xxxxl.l.l.l.l.l.l.................<........................+'''c''ccxx
-xxxx.l.l.l.l.l.l...........................................c'''ccccxxx
-xxxxx.l.l.l.l.l.l..........................................c''''cxxxxx
-xxxxx..l.l.l.l.............................................c''''cxxxxx
-xxxxx.....l.l............................................cccc'''cxxxxx
-xxxxxx......................[...........(................ccccccccxxxxx
-xxxxxx...................................................cccc..xxxxxxx
-xxxxxx.........................................................xxxxxxx
-xxxxxxx.......................................................xxxxxxxx
-xxxxxxx.......................................................xxxxxxxx
-xxxxxxxx.....................................................xxxxxxxxx
-xxxxxxxx.....................................................xxxxxxxxx
-xxxxxxxxx...................................................xxxxxxxxxx
-xxxxxxxxxx....................wwwww........................xxxxxxxxxxx
-xxxxxxxxxxx..................wwwwwwww.....................xxxxxxxxxxxx
-xxxxxxxxxxxx..............wwwwwwwwwwwww..................xxxxxxxxxxxxx
-xxxxxxxxxxxxx...........w..wwww..wwwww..w...............xxxxxxxxxxxxxx
-xxxxxxxxxxxxxx..........w...ww.....ww..wwwww...........xxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxx.........ww......ww....wwwwwwwww.......xxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxx.........ww....wwwww..wwwwwwwwww.....xxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxx.........ww....wwwww..wwwwwwwwww...xxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxx........wwww.........wwwwwwwwwwwwxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxx......wwwwwww....wwwwwwwwwwwwwwxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxx...wwwwwwwwwwCwwwwwwwwwwwwwxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxwwwwwwwwwwwwwwwwwwwwwwwxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxwwwwwwwwwwwwwwwwwxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxwwwwwwwwwwwxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-ENDMAP
-
 ######################################################################
 # The main vault for Vestibule w/subvaults (by Mu.)
+# The old vestibule has been folded into this vault.
 #
-NAME:     vestibule_of_hell_mu
+NAME:     vestibule_of_hell_subvaulted
 PLACE:    Hell
 ORIENT:   encompass
-WEIGHT:   20
 TAGS:     no_rotate no_dump
 SUBVAULT: A : vestibule_dis
 SUBVAULT: B : vestibule_tar
@@ -550,12 +567,36 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ENDMAP
 
 ######################### Vestibule Tartarus
+NAME: vestibule_tar_old
+TAGS: vestibule_tar
+KFEAT: T = enter_tartarus
+KMONS: T = revenant / shadow dragon
+FTILE: +'T = floor_infernal_blank
+TILE: c = dngn_stone_dark
+MAP
+xxxxxxxxxxxxxxxcccxxxxxxxxxxxxxxx
+ xxxxxxxxxxxxxcc'ccxxxxxxxxxxxxx
+  ....xxxxccccc'T'cccccxxxx....
+   .......c'''c'''c'''c.......
+    ......c'''cc+cc'''c......
+     ....ccc'''''''''ccc....
+      ...ccc'''''''''ccc...
+       ..cccccc+++cccccc..
+        .ccc.........ccc.
+         ...............
+          .............
+           ...........
+            .........
+             .......
+              .....
+               ...
+ENDMAP
+
 NAME: vestibule_tar_mu
 TAGS: vestibule_tar
-MARKER: T=feat:enter_tartarus
+KFEAT:  T=enter_tartarus
 FTILE:  =T3Dz+'; = floor_infernal_blank
 TILE:   c = dngn_stone_dark
-SUBST:  T=A
 SUBST:  ; = .
 KMONS:  3 = shadow wraith
 KMONS:  z = skeletal warrior / zombie / nothing
@@ -582,8 +623,8 @@ ENDMAP
 
 NAME:   vestibule_tar_nicolae_necropolis
 TAGS:   vestibule_tar
-MARKER: T = feat:enter_tartarus
-SUBST:  T = A, d = ccc., z = zzz..
+KFEAT:  T = enter_tartarus
+SUBST:  d = ccc., z = zzz..
 KMONS:  z = place:Depths:1 zombie / lost soul
 KMONS:  b = revenant / lich / vampire mage / ancient lich / mummy priest / \
            curse skull
@@ -607,17 +648,67 @@ MAP
                ...
 ENDMAP
 
+NAME: vestibule_tar_grunt_deathgaze
+TAGS: vestibule_tar
+KFEAT: T = enter_tartarus
+KMONS: T = revenant / lich / unborn / shadow dragon
+MONS: ancient champion band, reaper / soul eater, skeletal warrior band
+FTILE: +'T12 = floor_infernal_blank
+TILE: c = dngn_stone_dark
+MAP
+...........ccccccccccc...........
+ ...cc...ccc'''''''''ccc...cc...
+  ..cc..cc'''''''''''''cc..cc..
+   .....c'''2'''T'''2'''c.....
+    ..3.cc'''''''''''''cc.3..
+     ....cccc'''''''cccc....
+      ...c''cc'''''cc''c...
+       ..cc'''''c'''''cc..
+        ..cc'1'ccc'1'cc..
+         ..cc''c'c''cc..
+          ..cc'''''cc..
+           ..cc+++cc..
+            .........
+             ...3...
+              .....
+               ...
+ENDMAP
+
 ######################### Vestibule Gehenna
+NAME: vestibule_geh_old
+TAGS: vestibule_geh
+KFEAT: G = enter_gehenna
+KMONS: G = hellion / balrug
+: hell_lava_spawns(_G)
+MAP
+xxxxxxxxxxxxxx.l.l.xxxxxxxxxxxxxx
+ xxxxxxxxxx...l.l.l...xxxxxxxxxx
+  xxxxxx.....l.l.l.l.....xxxxxx
+   .........l.l.l.l.l.........
+    .........l.l.l.l.l.......
+     .......l.l.l.l.l.......
+      .....l.l.l.l.l.l.....
+       .....l.l.G.l.l.....
+        ...l.l.l.l.l.....
+         ...l.l.l.l.l...
+          ...l.l.l.l...
+           ...l.l.....
+            .l.l.....
+             .......
+              .....
+               ...
+ENDMAP
+
 NAME: vestibule_geh_mu
 TAGS: vestibule_geh
-MARKER: G=feat:enter_gehenna
-SUBST:  G=A
+KFEAT:  G=enter_gehenna
 SUBST:  L = l.
 KMONS:  5 = crimson imp
 KMONS:  2 = hellion
 KMONS:  3 = red devil
 KMONS:  2 = reaper / soul eater
 FTILE:  x'5a2V+ = floor_infernal_blank
+: hell_lava_spawns(_G)
 MAP
 lllllllllllllllllllllllllllllllll
  Lllllllllllllllllllllllllllllll
@@ -643,13 +734,14 @@ SHUFFLE: ab/cd/ef, cd/cd/gh, ef/ef/ef/ij
 NSUBST:  a = G / H / ', b = 1:' / 2:'pp / *:p
 NSUBST:  h = 1:. / 2:.qq / *:q, j = 1:. / 2:.rr / *:r
 SUBST:   p : llXXx, q : llXXx, r : llXXx
-MARKER:  G = feat:enter_gehenna
-SUBST:   G = A, ce = x, d : xlllLX., f : xlllLX., gi = ....m, m = mm.
+KFEAT:   G = enter_gehenna
+SUBST:   ce = x, d : xlllLX., f : xlllLX., gi = ....m, m = mm.
 SUBST:   L = l., X = xl
 KMONS:   H = hellion
 KMONS:   m = crimson imp / red devil / smoke demon
 KMONS:   ' = hell beast / hell hound / hell hog / nothing w:140
 FTILE:   AH' = floor_infernal_blank
+: hell_lava_spawns(_G)
 MAP
 .........bab.........dcd.........
  ...m..bbbabbb.....dddcddd..m...
@@ -669,15 +761,68 @@ MAP
                ...
 ENDMAP
 
+NAME: vestibule_geh_grunt_obsidian_fortress
+TAGS: vestibule_geh
+KFEAT: G = enter_gehenna
+MONS: balrug / hellion, sun demon / smoke demon
+MONS: red devil / orange demon / hell hound / hell hog
+MONS: red devil / orange demon / hell hound / hell hog
+NSUBST: 2 = 3:2 / *:.
+NSUBST: 3 = 3:3 / *:.
+FTILE: 123+G = floor_infernal_blank
+: hell_lava_spawns(_G)
+MAP
+lllllllllccccccccccccccclllllllll
+ llllllccc'''c''1''c'''cccllllll
+  llllcc3''2'+''G''+'2''3ccllll
+   lllc''''''c''1''c''''''clll
+    llc'2'2'ccccccccc'2'2'cll
+     lcc''''c'''''''c''''ccl
+      lcc''c+''2'2''+c''ccl
+       lcccc'3'''''3'ccccl
+        lllc''3'''3''clll
+         llcc'''''''ccll
+          llccc+++cccll
+           lll.....lll
+            l.l4.4l.l
+             .lllll.
+              .lll.
+               ...
+ENDMAP
+
 ######################### Vestibule Cocytus
+NAME: vestibule_coc_old
+TAGS: vestibule_coc
+KFEAT: C = enter_cocytus
+KMONS: C = blizzard demon / ice statue
+: hell_water_spawns(_G)
+MAP
+wwwwwwwwwwwwwwwwCwwwwwwwwww......
+ wwwwwwwwwwwwww....wwwwwww......
+  wwwwwwwwww.........wwww......
+   wwwwwwwww..wwwww....ww.....
+    wwwwwwwww..wwwww....ww...
+     wwwwwwww....ww......ww.
+      .wwwww..ww.....ww....
+       ...w..wwwww..wwww..
+        ....wwwwwwwwwwww.
+         .....wwwwwwww..
+          ......wwwww..
+           ...........
+            .........
+             .......
+              .....
+               ...
+ENDMAP
+
 NAME: vestibule_coc_mu
 TAGS: vestibule_coc
-MARKER: C=feat:enter_cocytus
-SUBST:  C=A
+KFEAT:  C=enter_cocytus
 SUBST:  8 = 8 .:59
 KMONS:  8 = ice statue
 KMONS:  3 = blue devil
 KMONS:  2 = ice devil
+: hell_water_spawns(_G)
 MAP
 ...........wwwwwwwwwww...........
  ....33...wwwwwwwwwwwww...33....
@@ -699,12 +844,13 @@ ENDMAP
 
 NAME:    vestibule_coc_nicolae_fridge_bridge
 TAGS:    vestibule_coc no_pool_fixup
-MARKER:  C = feat:enter_cocytus
+KFEAT:   C = enter_cocytus
 SHUFFLE: ab
-SUBST:   C = A, a = I, b : w., W = w.
+SUBST:   a = I, b : w., W = w.
 KMONS:   I = ice statue
 KMONS:   3 = ice devil / blizzard demon
 KMONS:   2 = blue devil / freezing wraith / white imp / nothing
+: hell_water_spawns(_G)
 MAP
 wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
  WWWWwwwwwwwww.....wwwwwwwwwWWWW
@@ -724,28 +870,80 @@ wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
                ...
 ENDMAP
 
+NAME: vestibule_coc_grunt_go_with_the_floe
+TAGS: vestibule_coc no_pool_fixup
+MONS: frost giant / blizzard demon / ice statue
+MONS: blizzard demon / ice devil, ice devil / blue devil / freezing wraith
+NSUBST: 3 = 3:3 / *:.
+SUBST: W = wW.
+KFEAT: A = stone_arch
+KFEAT: C = enter_cocytus
+KFEAT: W = W
+: hell_water_spawns(_G)
+MAP
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+ wwwwwWWWWWWWWWWwWWWWWWWWWWwwwww
+  wwwWW...WW...WWW...WW...WWwww
+   wwW..W2....3...3....2W..Www
+    wwW.3W...W..W..W...W3.Www
+     wwW..W.WWW.3.WWW.W..Www
+      wwW.C.WwW.W.WwW.A.Www
+       wwW..WwW.W.WwW..Www
+        wwW1WwW.3.WwW1Www
+         wwWWwW.W.WwWWww
+          wwwwW.W.Wwwww
+           wwwW.3.Wwww
+            wwW.W.Www
+             wW.W.Ww
+              W.3.W
+               .W.
+ENDMAP
+
 ######################### Vestibule Dis
+NAME: vestibule_dis_old
+TAGS: vestibule_dis
+KFEAT: D = enter_dis
+KMONS: D = war gargoyle / reaper
+FTILE: +'D = floor_infernal_blank
+MAP
+xxxxxxxxxxxxxvvvvvvvxxxxxxxxxxxxx
+ xxxxxxxxxx..v'''''v..xxxxxxxxxx
+  xxxxxx.....v'''''v....xxxxxxx
+   xxx.......v'''''v.......xxx
+    .........v''D''v.........
+     ........v'''''v........
+      .......v'''''v.......
+       ......vvv+vvv......
+        .................
+         ...............
+          .............
+           ...........
+            .........
+             .......
+              .....
+               ...
+ENDMAP
+
 NAME: vestibule_dis_mu
 TAGS: vestibule_dis
-MARKER: D=feat:enter_dis
-SUBST:  D=A
+KFEAT:  D=enter_dis
 KMONS:  8 = iron golem
 KMONS:  3 = iron devil
-KMONS:  6 = metal gargoyle
+KMONS:  6 = war gargoyle
 FTILE:  'A+ = floor_infernal_blank
 MAP
 .............v.vvv.v.............
  ...vv....v...vv'vv...v....vv...
-  ..6v.....vv.v'D'v.vv.....v6..
+  ..3v.....vv.v'D'v.vv.....v3..
    .......v...vv'vv...v.......
     ...vv....v.v+v.v....vv...
-     ..6v..3...8.8...3..v6..
+     ..3v..6...8.8...6..v3..
       .....................
        ...vv...v.v...vv...
-        ..6v.........v6..
+        ..3v.........v3..
          ...............
           ...vv...vv...
-           ..6v...v6..
+           ..3v...v3..
             .........
              .......
               .....
@@ -754,13 +952,13 @@ ENDMAP
 
 NAME:   vestibule_dis_nicolae_mini_city_of_dis
 TAGS:   vestibule_dis
-MARKER: D = feat:enter_dis
+KFEAT:  D = enter_dis
 NSUBST: E = + / v, F = + / v, q = + / v, p = + / v, \
         B = 1:+ / 1:+vv / *:v, Z = 1:+ / 1:+v / *:v
-SUBST:  D = A, 2 = 22., 3 = 33.
+SUBST:  2 = 22., 3 = 33.
 KMONS:  1 = iron golem / iron dragon
 KMONS:  2 = iron devil / iron imp w:5
-KMONS:  3 = metal gargoyle / reaper w:5
+KMONS:  3 = war gargoyle / reaper w:5
 KFEAT:  H = G
 TILE:   GH = dngn_statue_iron_golem
 FTILE:  A'1H = floor_infernal_blank
@@ -783,7 +981,56 @@ vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
                ...
 ENDMAP
 
+NAME: vestibule_dis_grunt_castle
+TAGS: vestibule_dis
+MONS: war gargoyle / iron dragon, iron troll / iron golem
+MONS: iron devil / iron imp w:5
+NSUBST: D = 1:D / *:A
+KFEAT: D = enter_dis
+KFEAT: A = stone_arch
+MAP
+.......v.vvvvxxxxxxxvvvv.v.......
+ ..vv...vvD.vvxxxxxvv.Dvv...vv..
+  .3v...vv.2vvvvvvvvv2.vv...v3.
+   ....v.vvv.........vvv.v....
+    ....v.vv..1...1..vv.v....
+     ..v.vvv.........vvv.v..
+      ..vv.2vvv+++vvv2.vv..
+       .vvD.vv.....vv.Dvv.
+        .vvvv.v...v.vvvv.
+         .vv.v.3.3.v.vv.
+          ..v.v...v.v..
+           ..3.....3..
+            ..v...v..
+             .......
+              .....
+               ...
+ENDMAP
+
 ######################### Vestibule Geryon
+NAME: vestibule_geryon_old
+TAGS: vestibule_geryon
+MONS: Geryon
+MAP
+       ...
+      ..{..
+     .......
+    .........
+   ...........
+  .............
+ ...............
+.................
+.......<1<.......
+........<........
+ ...............
+  .............
+   ...........
+    .........
+     [.....(
+      .....
+       ...
+ENDMAP
+
 NAME: vestibule_geryon_mu
 TAGS: vestibule_geryon
 MONS: Geryon
@@ -855,5 +1102,34 @@ MAP
     ....C....
      .......
       .....
+       ...
+ENDMAP
+
+NAME: vestibule_geryon_grunt_focused
+TAGS: vestibule_geryon
+MONS: Geryon
+# Missing: abcde - we don't want it to be *completely* open.
+SHUFFLE: ABCDE / ABCDe / ABCdE / ABCde / ABcDE / ABcDe / ABcdE / ABcde / \
+         AbCDE / AbCDe / AbCdE / AbCde / AbcDE / AbcDe / AbcdE / Abcde / \
+         aBCDE / aBCDe / aBCdE / aBCde / aBcDE / aBcDe / aBcdE / aBcde / \
+         abCDE / abCDe / abCdE / abCde / abcDE / abcDe / abcdE
+SUBST: ABCDE = x, abcde = .
+MAP
+       ...
+      ..B..
+     ...C...
+    ....B....
+   .ED.....DE.
+  ..D{.....[D..
+ .......A.......
+.................
+.BCB..A.1.A..BCB.
+.................
+ .......A.......
+  ..D(.....<D..
+   .ED.....DE.
+    ....B....
+     ...C...
+      ..B..
        ...
 ENDMAP

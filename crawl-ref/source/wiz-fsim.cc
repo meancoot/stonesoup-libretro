@@ -20,6 +20,7 @@
 #include "items.h"
 #include "item_use.h"
 #include "libutil.h"
+#include "makeitem.h"
 #include "message.h"
 #include "mon-place.h"
 #include "mgen_data.h"
@@ -48,14 +49,17 @@ typedef map<skill_type, int8_t>::iterator skill_map_iterator;
 
 static const char* _title_line =
     "AvHitDam | MaxDam | Accuracy | AvDam | AvTime | AvSpeed | AvEffDam"; // 64 columns
+static const char* _csv_title_line =
+    "AvHitDam\tMaxDam\tAccuracy\tAvDam\tAvTime\tAvSpeed\tAvEffDam";
 
-static const string _fight_string(fight_data fdata)
+static const char* _fight_string(fight_data fdata, bool csv)
 {
-    return make_stringf("   %5.1f |    %3d |     %3d%% |"
-                        " %5.1f |   %3d  | %5.2f |    %5.1f",
+    return make_stringf(csv ? "%.1f\t%d\t%d%%\t%.1f\t%d\t%.2f\t%.1f"
+                            : "   %5.1f |    %3d |     %3d%% |"
+                              " %5.1f |   %3d  | %5.2f |    %5.1f",
                         fdata.av_hit_dam, fdata.max_dam, fdata.accuracy,
                         fdata.av_dam, fdata.av_time, fdata.av_speed,
-                        fdata.av_eff_dam);
+                        fdata.av_eff_dam).c_str();
 }
 
 static skill_type _equipped_skill()
@@ -85,7 +89,7 @@ static string _equipped_weapon_name()
 
     if (iweap)
     {
-        string item_buf = iweap->name(DESC_PLAIN, true);
+        string item_buf = iweap->name(DESC_PLAIN);
         // If it's a ranged weapon, add the description of the missile
         if (is_range_weapon(*iweap) && missile < ENDOFPACK && missile >= 0)
                 item_buf += " with " + you.inv[missile].name(DESC_PLAIN);
@@ -158,8 +162,33 @@ static void _write_mon(FILE * o, monster &mon)
             mon.ev);
 }
 
-static bool _fsim_kit_equip(const string &kit)
+static bool _equip_weapon(const string &weapon, bool &abort)
 {
+    for (int i = 0; i < ENDOFPACK; ++i)
+    {
+        if (!you.inv[i].defined())
+            continue;
+
+        if (you.inv[i].name(DESC_PLAIN).find(weapon) != string::npos)
+        {
+            if (i != you.equip[EQ_WEAPON])
+            {
+                wield_weapon(true, i, false);
+                if (i != you.equip[EQ_WEAPON])
+                {
+                    abort = true;
+                    return true;
+                }
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool _fsim_kit_equip(const string &kit, string &error)
+{
+    bool abort = false;
     string::size_type ammo_div = kit.find("/");
     string weapon = kit;
     string missile;
@@ -173,25 +202,27 @@ static bool _fsim_kit_equip(const string &kit)
 
     if (!weapon.empty())
     {
-        for (int i = 0; i < ENDOFPACK; ++i)
+        if (!_equip_weapon(weapon, abort))
         {
-            if (!you.inv[i].defined())
-                continue;
+            int item = create_item_named("race:none mundane not_cursed ident:all " + weapon,
+                                         you.pos(), &error);
+            if (item == NON_ITEM)
+                return false;
+            if (move_item_to_player(item, 1, true, true) <= 0)
+                return false;
+            _equip_weapon(weapon, abort);
+        }
 
-            if (you.inv[i].name(DESC_PLAIN).find(weapon) != string::npos)
-            {
-                if (i != you.equip[EQ_WEAPON])
-                {
-                    wield_weapon(true, i, false);
-                    if (i != you.equip[EQ_WEAPON])
-                        return false;
-                }
-                break;
-            }
+        if (abort)
+        {
+            error = "Cannot wield weapon";
+            return false;
         }
     }
     else if (you.weapon())
         unwield_item(false);
+
+    you.wield_change = true;
 
     if (!missile.empty())
     {
@@ -203,11 +234,13 @@ static bool _fsim_kit_equip(const string &kit)
             if (you.inv[i].name(DESC_PLAIN).find(missile) != string::npos)
             {
                 quiver_item(i);
+                you.redraw_quiver = true;
                 break;
             }
         }
     }
 
+    redraw_screen();
     return true;
 }
 
@@ -287,6 +320,8 @@ static monster* _init_fsim()
     mon->hit_points = mon->max_hit_points = MAX_MONSTER_HP;
     mon->behaviour = BEH_SEEK;
 
+    redraw_screen();
+
     return mon;
 }
 
@@ -341,7 +376,7 @@ static fight_data _get_fight_data(monster &mon, int iter_limit, bool defend)
             // being empty-handed but having a missile quivered
             if ((iweap && iweap->base_type == OBJ_WEAPONS &&
                         is_range_weapon(*iweap))
-                || (!iweap && (missile != -1)))
+                || (!iweap && missile != -1))
             {
                 bolt beam;
                 // throw_it() will decrease quantity by 1
@@ -419,10 +454,10 @@ void wizard_quick_fsim()
     const int iter_limit = Options.fsim_rounds;
     fight_data fdata = _get_fight_data(*mon, iter_limit, false);
     mprf("           %s\nAttacking: %s", _title_line,
-         _fight_string(fdata).c_str());
+         _fight_string(fdata, false));
 
     fdata = _get_fight_data(*mon, iter_limit, true);
-    mprf("Defending: %s", _fight_string(fdata).c_str());
+    mprf("Defending: %s", _fight_string(fdata, false));
 
     _uninit_fsim(mon);
     return;
@@ -494,7 +529,11 @@ static void _fsim_simple_scale(FILE * o, monster* mon, bool defense)
 
     const char* title = make_stringf("%10.10s | %s", col_name.c_str(),
                                      _title_line).c_str();
-    fprintf(o, "%s\n", title);
+    if (Options.fsim_csv)
+        fprintf(o, "%s\t%s\n", col_name.c_str(), _csv_title_line);
+    else
+        fprintf(o, "%s\n", title);
+
     mpr(title);
 
     const int iter_limit = Options.fsim_rounds;
@@ -510,9 +549,12 @@ static void _fsim_simple_scale(FILE * o, monster* mon, bool defense)
 
         fight_data fdata = _get_fight_data(*mon, iter_limit, defense);
         const string line = make_stringf("        %2d | %s", i,
-                                         _fight_string(fdata).c_str());
+                                         _fight_string(fdata, false));
         mprf("%s", line.c_str());
-        fprintf(o, "%s\n", line.c_str());
+        if (Options.fsim_csv)
+            fprintf(o, "%d\t%s\n", i, _fight_string(fdata, true));
+        else
+            fprintf(o, "%s\n", line.c_str());
         fflush(o);
 
         // kill the loop if the user hits escape
@@ -540,16 +582,16 @@ static void _fsim_double_scale(FILE * o, monster* mon, bool defense)
     }
 
     fprintf(o, "%s(x) vs %s(y)\n", skill_name(skx), skill_name(sky));
-    fprintf(o, "  ");
+    fprintf(o, Options.fsim_csv ? "\t" : "  ");
     for (int y = 1; y <= 27; y += 2)
-        fprintf(o,"   %2d", y);
+        fprintf(o,Options.fsim_csv ? "%d\t" : "   %2d", y);
 
     fprintf(o,"\n");
 
     const int iter_limit = Options.fsim_rounds;
     for (int y = 1; y <= 27; y += 2)
     {
-        fprintf(o, "%2d", y);
+        fprintf(o, Options.fsim_csv ? "%d\t" : "%2d", y);
         for (int x = 1; x <= 27; x += 2)
         {
             mesclr();
@@ -558,7 +600,7 @@ static void _fsim_double_scale(FILE * o, monster* mon, bool defense)
             fight_data fdata = _get_fight_data(*mon, iter_limit, defense);
             mprf("%s %d, %s %d: %d", skill_name(skx), x, skill_name(sky), y,
                  int(fdata.av_eff_dam));
-            fprintf(o,"%5.1f", fdata.av_eff_dam);
+            fprintf(o,Options.fsim_csv ? "%.1f\t" : "%5.1f", fdata.av_eff_dam);
             fflush(o);
 
             // kill the loop if the user hits escape
@@ -580,7 +622,7 @@ void wizard_fight_sim(bool double_scale)
         return;
 
     bool defense = false;
-    const char * fightstat = "fight.stat";
+    const char * fightstat = Options.fsim_csv ? "fsim.csv" : "fsim.txt";
 
     FILE * o = fopen(fightstat, "a");
     if (!o)
@@ -643,7 +685,8 @@ void wizard_fight_sim(bool double_scale)
     else
         for (int i = 0, size = Options.fsim_kit.size(); i < size; ++i)
         {
-            if (_fsim_kit_equip(Options.fsim_kit[i]))
+            string error;
+            if (_fsim_kit_equip(Options.fsim_kit[i], error))
             {
                 _write_weapon(o);
                 fsim_proc(o, mon, defense);
@@ -652,11 +695,14 @@ void wizard_fight_sim(bool double_scale)
             else
             {
                 mprf("Aborting sim on %s", Options.fsim_kit[i].c_str());
+                if (error != "")
+                    mpr(error.c_str());
                 break;
             }
         }
 
-    fprintf(o, "-----------------------------------\n\n");
+    if (!Options.fsim_csv)
+        fprintf(o, "-----------------------------------\n\n");
     fclose(o);
 
     skill_backup.restore_levels();

@@ -527,16 +527,6 @@ bool armour_prompt(const string & mesg, int *index, operation_types oper)
     return false;
 }
 
-static bool cloak_is_being_removed(void)
-{
-    if (current_delay_action() != DELAY_ARMOUR_OFF)
-        return false;
-
-    if (you.delay_queue.front().parm1 != you.equip[ EQ_CLOAK ])
-        return false;
-
-    return true;
-}
 
 //---------------------------------------------------------------
 //
@@ -876,40 +866,6 @@ bool do_wear_armour(int item, bool quiet)
         return false;
     }
 
-    bool removed_cloak = false;
-    int  cloak = -1;
-
-    // Removing body armour requires removing the cloak first.
-    if (slot == EQ_BODY_ARMOUR
-        && you.equip[EQ_CLOAK] != -1 && !cloak_is_being_removed())
-    {
-        if (you.equip[EQ_BODY_ARMOUR] != -1
-            && you.inv[you.equip[EQ_BODY_ARMOUR]].cursed())
-        {
-            if (!quiet)
-            {
-                mprf("%s is stuck to your body!",
-                     you.inv[you.equip[EQ_BODY_ARMOUR]].name(DESC_YOUR)
-                                                       .c_str());
-            }
-            return false;
-        }
-        if (!you.inv[you.equip[EQ_CLOAK]].cursed())
-        {
-            cloak = you.equip[EQ_CLOAK];
-            if (!takeoff_armour(you.equip[EQ_CLOAK]))
-                return false;
-
-            removed_cloak = true;
-        }
-        else
-        {
-            if (!quiet)
-                mpr("Your cloak prevents you from wearing the armour.");
-            return false;
-        }
-    }
-
     if ((slot == EQ_CLOAK
            || slot == EQ_HELMET
            || slot == EQ_GLOVES
@@ -930,9 +886,6 @@ bool do_wear_armour(int item, bool quiet)
     const int delay = armour_equip_delay(invitem);
     if (delay)
         start_delay(DELAY_ARMOUR_ON, delay, item);
-
-    if (removed_cloak)
-        start_delay(DELAY_ARMOUR_ON, 1, cloak);
 
     return true;
 }
@@ -982,56 +935,30 @@ bool takeoff_armour(int item)
     if (!_safe_to_remove_or_wear(invitem, true))
         return false;
 
-    bool removed_cloak = false;
-    int cloak = -1;
 
-    if (slot == EQ_BODY_ARMOUR)
+    switch (slot)
     {
-        if (you.equip[EQ_CLOAK] != -1 && !cloak_is_being_removed())
+    case EQ_BODY_ARMOUR:
+    case EQ_SHIELD:
+    case EQ_CLOAK:
+    case EQ_HELMET:
+    case EQ_GLOVES:
+    case EQ_BOOTS:
+        if (item != you.equip[slot])
         {
-            if (!you.inv[you.equip[EQ_CLOAK]].cursed())
-            {
-                cloak = you.equip[ EQ_CLOAK ];
-                if (!takeoff_armour(you.equip[EQ_CLOAK]))
-                    return false;
-
-                removed_cloak = true;
-            }
-            else
-            {
-                mpr("Your cloak prevents you from removing the armour.");
-                return false;
-            }
+            mpr("You aren't wearing that!");
+            return false;
         }
-    }
-    else
-    {
-        switch (slot)
-        {
-        case EQ_SHIELD:
-        case EQ_CLOAK:
-        case EQ_HELMET:
-        case EQ_GLOVES:
-        case EQ_BOOTS:
-            if (item != you.equip[slot])
-            {
-                mpr("You aren't wearing that!");
-                return false;
-            }
-            break;
+        break;
 
-        default:
-            break;
-        }
+    default:
+        break;
     }
 
     you.turn_is_over = true;
 
     const int delay = armour_equip_delay(invitem);
     start_delay(DELAY_ARMOUR_OFF, delay, item);
-
-    if (removed_cloak)
-        start_delay(DELAY_ARMOUR_ON, 1, cloak);
 
     return true;
 }
@@ -1062,14 +989,6 @@ static vector<equipment_type> _current_jewellery_types()
     vector<equipment_type> ret = _current_ring_types();
     ret.push_back(EQ_AMULET);
     return ret;
-}
-
-static bool _ring_change_prohibited_by_gloves(equipment_type eq)
-{
-    const item_def* gloves = you.slot_item(EQ_GLOVES, false);
-    return gloves && gloves->cursed()
-           && (eq == EQ_LEFT_RING
-               || eq == EQ_RIGHT_RING);
 }
 
 static int _prompt_ring_to_remove(int new_ring)
@@ -1258,8 +1177,8 @@ static bool _two_targeted_scrolls_identified()
 static bool _one_targeted_scroll_tried()
 {
     return you.type_ids[OBJ_SCROLLS][SCR_RECHARGING] ==  ID_TRIED_ITEM_TYPE
-           || (you.type_ids[OBJ_SCROLLS][SCR_ENCHANT_ARMOUR] == ID_TRIED_ITEM_TYPE)
-           || (you.type_ids[OBJ_SCROLLS][SCR_IDENTIFY] == ID_TRIED_ITEM_TYPE);
+           || you.type_ids[OBJ_SCROLLS][SCR_ENCHANT_ARMOUR] == ID_TRIED_ITEM_TYPE
+           || you.type_ids[OBJ_SCROLLS][SCR_IDENTIFY] == ID_TRIED_ITEM_TYPE;
 }
 
 // Checks whether removing an item would cause flight to end and the
@@ -1317,7 +1236,6 @@ static bool _swap_rings(int ring_slot)
     int available = 0;
     bool all_same = true;
     item_def* first_ring = NULL;
-    bool gloves_prohibit = false;
     for (vector<equipment_type>::iterator eq_it = ring_types.begin();
          eq_it != ring_types.end();
          ++eq_it)
@@ -1325,8 +1243,6 @@ static bool _swap_rings(int ring_slot)
         item_def* ring = you.slot_item(*eq_it, true);
         if (!you_tran_can_wear(*eq_it) || you.melded[*eq_it])
             melded++;
-        else if (_ring_change_prohibited_by_gloves(*eq_it))
-            gloves_prohibit = true;
         else if (ring != NULL)
         {
             if (first_ring == NULL)
@@ -1362,12 +1278,9 @@ static bool _swap_rings(int ring_slot)
     }
     else if (available == 0)
     {
-        if (gloves_prohibit)
-            mpr("You can't take your gloves off to put on a ring!");
-        else
-            mprf("You're already wearing %s cursed rings!%s",
-                 number_in_words(cursed).c_str(),
-                 (cursed == num_rings ? " Isn't that enough for you?" : ""));
+        mprf("You're already wearing %s cursed rings!%s",
+             number_in_words(cursed).c_str(),
+             (cursed > 2 ? " Isn't that enough for you?" : ""));
         return false;
     }
     // The simple case - only one available ring.
@@ -1445,15 +1358,11 @@ static bool _puton_item(int item_slot)
         for (vector<equipment_type>::const_iterator eq_it = ring_types.begin();
              eq_it != ring_types.end();
              ++eq_it)
-        {
-            if (_ring_change_prohibited_by_gloves(*eq_it))
-                continue;
             if (!you.slot_item(*eq_it, true))
             {
                 need_swap = false;
                 break;
             }
-        }
 
         if (need_swap)
             return _swap_rings(item_slot);
@@ -1488,24 +1397,15 @@ static bool _puton_item(int item_slot)
         hand_used = EQ_AMULET;
     else
     {
-        bool gloves_prohibit = false;
         for (vector<equipment_type>::const_iterator eq_it = ring_types.begin();
              eq_it != ring_types.end();
              ++eq_it)
         {
-            if (_ring_change_prohibited_by_gloves(*eq_it))
-                gloves_prohibit = true;
-            else if (!you.slot_item(*eq_it, true))
+            if (!you.slot_item(*eq_it, true))
             {
                 hand_used = *eq_it;
                 break;
             }
-        }
-        if (hand_used == EQ_NONE && gloves_prohibit)
-        {
-            // This shouldn't happen, but just in case...
-            mpr("You can't take your gloves off to put on a ring!");
-            return false;
         }
     }
 
@@ -1639,11 +1539,6 @@ bool remove_ring(int slot, bool announce)
     else if (you.melded[hand_used])
     {
         mpr("You can't take that off while it's melded.");
-        return false;
-    }
-    else if (_ring_change_prohibited_by_gloves(hand_used))
-    {
-        mpr("You can't take your gloves off to remove a ring!");
         return false;
     }
     else if (hand_used == EQ_AMULET
@@ -1890,8 +1785,7 @@ void zap_wand(int slot)
 
     if (alreadyknown && zap_wand.target == you.pos())
     {
-        if (wand.sub_type == WAND_TELEPORTATION
-            && you.no_tele(false, false))
+        if (wand.sub_type == WAND_TELEPORTATION && you.no_tele(false, false))
         {
             if (you.species == SP_FORMICID)
                 mpr("You cannot teleport.");
@@ -1899,11 +1793,16 @@ void zap_wand(int slot)
                 mpr("You cannot teleport right now.");
             return;
         }
-        else if (wand.sub_type == WAND_INVISIBILITY
-                 && _dont_use_invis())
+        else if (wand.sub_type == WAND_HASTING && you.stasis(false))
         {
+            if (you.species == SP_FORMICID)
+                mpr("You cannot haste.");
+            else
+                mpr("You cannot haste right now.");
             return;
         }
+        else if (wand.sub_type == WAND_INVISIBILITY && _dont_use_invis())
+            return;
     }
 
     if (!has_charges)
@@ -2308,6 +2207,14 @@ static bool _god_hates_brand(const int brand)
         return true;
     }
 
+    if (you_worship(GOD_DITHMENOS)
+        && (brand == SPWPN_FLAMING
+            || brand == SPWPN_FLAME
+            || brand == SPWPN_CHAOS))
+    {
+        return true;
+    }
+
     if (you_worship(GOD_SHINING_ONE) && brand == SPWPN_VENOM)
         return true;
 
@@ -2374,7 +2281,9 @@ static void _rebrand_weapon(item_def& wpn)
 
     set_item_ego_type(wpn, OBJ_WEAPONS, new_brand);
 
-    if (old_brand == SPWPN_DISTORTION && wpn.index() == you.weapon()->index())
+    if (old_brand == SPWPN_DISTORTION
+        && wpn.index() == you.weapon()->index()
+        && !you_worship(GOD_LUGONU))
     {
         // you can't get rid of distortion this easily
         mprf("%s twongs alarmingly.", itname.c_str());
@@ -2886,7 +2795,7 @@ static void _vulnerability_scroll()
     // First cast antimagic on yourself.
     antimagic();
 
-    mon_enchant lowered_mr(ENCH_LOWERED_MR, 1, &you, 40);
+    mon_enchant lowered_mr(ENCH_LOWERED_MR, 1, &you, 400);
 
     // Go over all creatures in LOS.
     for (radius_iterator ri(you.pos(), LOS_NO_TRANS); ri; ++ri)
@@ -3204,6 +3113,9 @@ void read_scroll(int slot)
 
     case SCR_IMMOLATION:
     {
+        // Dithmenos hates trying to play with fire, even if it does nothing.
+        did_god_conduct(DID_FIRE, 3 + random2(4), item_type_known(scroll));
+
         bool had_effect = false;
         for (monster_near_iterator mi(you.pos(), LOS_NO_TRANS); mi; ++mi)
         {
@@ -3397,10 +3309,13 @@ void read_scroll(int slot)
             || which_scroll == SCR_RECHARGING
             || which_scroll == SCR_ENCHANT_ARMOUR))
     {
-        set_ident_type(OBJ_SCROLLS, SCR_IDENTIFY, ID_KNOWN_TYPE);
-        set_ident_type(OBJ_SCROLLS, SCR_RECHARGING, ID_KNOWN_TYPE);
-        set_ident_type(OBJ_SCROLLS, SCR_ENCHANT_ARMOUR, ID_KNOWN_TYPE);
         mpr("You have identified the last targeted scroll.");
+        if (set_ident_type(OBJ_SCROLLS, SCR_IDENTIFY, ID_KNOWN_TYPE))
+            pack_item_identify_message(OBJ_SCROLLS, SCR_IDENTIFY);
+        if (set_ident_type(OBJ_SCROLLS, SCR_RECHARGING, ID_KNOWN_TYPE))
+            pack_item_identify_message(OBJ_SCROLLS, SCR_RECHARGING);
+        if (set_ident_type(OBJ_SCROLLS, SCR_ENCHANT_ARMOUR, ID_KNOWN_TYPE))
+            pack_item_identify_message(OBJ_SCROLLS, SCR_ENCHANT_ARMOUR);
     }
 
     if (!alreadyknown && dangerous)

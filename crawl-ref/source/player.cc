@@ -563,6 +563,8 @@ bool is_player_same_genus(const monster_type mon, bool transform)
             return mon == MONS_PORCUPINE;
         case TRAN_WISP:
             return mon == MONS_INSUBSTANTIAL_WISP;
+        case TRAN_SHADOW:
+            return mons_genus(mon) == MONS_SHADOW;
         // Compare with monster *species*.
         case TRAN_LICH:
             return mons_species(mon) == MONS_LICH;
@@ -1571,6 +1573,7 @@ int player_res_fire(bool calc_unid, bool temp, bool items)
 
     // mutations:
     rf += player_mutation_level(MUT_HEAT_RESISTANCE, temp);
+    rf -= player_mutation_level(MUT_HEAT_VULNERABILITY, temp);
     rf += player_mutation_level(MUT_MOLTEN_SCALES, temp) == 3 ? 1 : 0;
 
     // spells:
@@ -1725,6 +1728,7 @@ int player_res_cold(bool calc_unid, bool temp, bool items)
 
     // mutations:
     rc += player_mutation_level(MUT_COLD_RESISTANCE, temp);
+    rc -= player_mutation_level(MUT_COLD_VULNERABILITY, temp);
     rc += player_mutation_level(MUT_ICY_BLUE_SCALES, temp) == 3 ? 1 : 0;
     rc += player_mutation_level(MUT_SHAGGY_FUR, temp) == 3 ? 1 : 0;
 
@@ -1846,6 +1850,7 @@ int player_res_torment(bool, bool temp)
            || you.form == TRAN_FUNGUS
            || you.form == TRAN_TREE
            || you.form == TRAN_WISP
+           || you.form == TRAN_SHADOW
            || you.species == SP_VAMPIRE && you.hunger_state == HS_STARVING
            || you.petrified()
            || (temp && player_mutation_level(MUT_STOCHASTIC_TORMENT_RESISTANCE)
@@ -1867,6 +1872,7 @@ int player_res_poison(bool calc_unid, bool temp, bool items)
     if ((you.is_undead == US_SEMI_UNDEAD ? you.hunger_state == HS_STARVING
             : you.is_undead && (temp || you.form != TRAN_LICH))
         || you.is_artificial()
+        || (temp && you.form == TRAN_SHADOW)
         || player_equip_unrand(UNRAND_OLGREB)
         || you.duration[DUR_DIVINE_STAMINA])
     {
@@ -1945,6 +1951,9 @@ int player_res_poison(bool calc_unid, bool temp, bool items)
     if (temp)
     {
         if (you.form == TRAN_SPIDER)
+            rp--;
+
+        if (you.duration[DUR_POISON_VULN])
             rp--;
     }
 
@@ -2182,6 +2191,7 @@ int player_prot_life(bool calc_unid, bool temp, bool items)
         case TRAN_TREE:
         case TRAN_WISP:
         case TRAN_LICH:
+        case TRAN_SHADOW:
             pl += 3;
             break;
         default:
@@ -2261,7 +2271,7 @@ int player_movement_speed(bool ignore_burden)
     if (you.run())
         mv -= 1;
 
-    mv += 2 * you.wearing_ego(EQ_ALL_ARMOUR, SPARM_PONDEROUSNESS);
+    mv += you.wearing_ego(EQ_ALL_ARMOUR, SPARM_PONDEROUSNESS);
 
     // Cheibriados
     if (you_worship(GOD_CHEIBRIADOS))
@@ -2271,8 +2281,11 @@ int player_movement_speed(bool ignore_burden)
     if (you.tengu_flight())
         mv--;
 
+    if (you.duration[DUR_FROZEN])
+        mv += 4;
+
     if (you.duration[DUR_GRASPING_ROOTS])
-        mv += 5;
+        mv += 3;
 
     // Mutations: -2, -3, -4, unless innate and shapechanged.
     if (int fast = player_mutation_level(MUT_FAST))
@@ -2450,6 +2463,7 @@ bool player_is_shapechanged(void)
     if (you.form == TRAN_NONE
         || you.form == TRAN_BLADE_HANDS
         || you.form == TRAN_LICH
+        || you.form == TRAN_SHADOW
         || you.form == TRAN_APPENDAGE)
     {
         return false;
@@ -2512,7 +2526,7 @@ static int _player_evasion_bonuses(ev_ignore_type evit)
     int evbonus = _player_para_evasion_bonuses(evit);
 
     if (you.duration[DUR_AGILITY])
-        evbonus += 5;
+        evbonus += AGILITY_BONUS;
 
     evbonus += you.wearing(EQ_RINGS_PLUS, RING_EVASION);
 
@@ -2538,11 +2552,10 @@ static int _player_evasion_bonuses(ev_ignore_type evit)
 // Player EV scaling for being flying tengu or swimming merfolk.
 static int _player_scale_evasion(int prescaled_ev, const int scale)
 {
-    if (you.duration[DUR_PETRIFYING] || you.duration[DUR_GRASPING_ROOTS]
-        || you.caught())
-    {
+    if (you.duration[DUR_PETRIFYING] || you.caught())
         prescaled_ev /= 2;
-    }
+    else if  (you.duration[DUR_GRASPING_ROOTS])
+        prescaled_ev = prescaled_ev * 2 / 3;
 
     switch (you.species)
     {
@@ -2975,6 +2988,22 @@ void gain_exp(unsigned int exp_gained, unsigned int* actual_gain)
         you.experience += exp_gained;
 
     you.attribute[ATTR_EVOL_XP] += exp_gained;
+    you.attribute[ATTR_GOD_WRATH_XP] -= exp_gained;
+    if (you.attribute[ATTR_GOD_WRATH_XP] < 0)
+    {
+        for (int i = GOD_NO_GOD; i < NUM_GODS; ++i)
+        {
+            if (player_under_penance((god_type) i))
+            {
+                while (you.attribute[ATTR_GOD_WRATH_XP] < 0)
+                {
+                    you.attribute[ATTR_GOD_WRATH_COUNT]++;
+                    set_penance_xp_timeout();
+                }
+                break;
+            }
+        }
+    }
 
     if (!you.sage_skills.empty())
     {
@@ -3243,8 +3272,8 @@ void level_change(int source, const char* aux, bool skip_attribute_increase)
                     perma_mutate(MUT_NEGATIVE_ENERGY_RESISTANCE, 1, "level up");
                 }
 
-                if ((you.experience_level == 9)
-                    || (you.experience_level == 18))
+                if (you.experience_level == 9
+                    || you.experience_level == 18)
                 {
                     perma_mutate(MUT_PASSIVE_MAPPING, 1, "level up");
                 }
@@ -3563,6 +3592,24 @@ void level_change(int source, const char* aux, bool skip_attribute_increase)
                 }
                 break;
 
+            case SP_VINE_STALKER:
+                if (!(you.experience_level % 4))
+                {
+                    modify_stat((coinflip() ? STAT_STR
+                                            : STAT_DEX), 1, false,
+                                "level gain");
+                }
+
+                if (you.experience_level == 6)
+                    perma_mutate(MUT_REGENERATION, 1, "vine stalker growth");
+
+                if (you.experience_level == 8)
+                    perma_mutate(MUT_FANGS, 1, "vine stalker growth");
+
+                if (you.experience_level == 12)
+                    perma_mutate(MUT_REGENERATION, 1, "vine stalker growth");
+                break;
+
             default:
                 break;
             }
@@ -3793,6 +3840,7 @@ int check_stealth(void)
     switch (you.form)
     {
     case TRAN_FUNGUS:
+    case TRAN_SHADOW: // You slip into the shadows.
         race_mod = 30;
         break;
     case TRAN_TREE:
@@ -3918,12 +3966,15 @@ int check_stealth(void)
 
     // If you've been tagged with Corona or are Glowing, the glow
     // makes you extremely unstealthy.
-    // The darker it is, the bigger the penalty.
     if (you.backlit())
-        stealth = (2 * you.current_vision * stealth) / (5 * LOS_RADIUS);
-    // On the other hand, shrouding has the reverse effect:
-    if (you.umbra())
-        stealth = (2 * LOS_RADIUS * stealth) / you.current_vision;
+        stealth = stealth * 2 / 5;
+    // On the other hand, shrouding has the reverse effect, if you know
+    // how to make use of it:
+    if (you.umbra()
+        && (you_worship(GOD_DITHMENOS) || you_worship(GOD_YREDELEMNUL)))
+    {
+        stealth = stealth * (you.piety + MAX_PIETY) / MAX_PIETY;
+    }
     // The shifting glow from the Orb, while too unstable to negate invis
     // or affect to-hit, affects stealth even more than regular glow.
     if (orb_haloed(you.pos()))
@@ -3953,8 +4004,6 @@ int get_expiration_threshold(duration_type dur)
     case DUR_SILENCE: // no message
         return 5 * BASELINE_DELAY;
 
-    case DUR_DEFLECT_MISSILES:
-    case DUR_REPEL_MISSILES:
     case DUR_REGENERATION:
     case DUR_RESISTANCE:
     case DUR_SWIFTNESS:
@@ -4233,7 +4282,7 @@ void display_char_status()
         DUR_PHASE_SHIFT,
         DUR_SILENCE,
         DUR_STONESKIN,
-        DUR_INVIS,
+        STATUS_INVISIBLE,
         DUR_CONF,
         STATUS_BEHELD,
         DUR_PARALYSIS,
@@ -4274,7 +4323,6 @@ void display_char_status()
         DUR_RETCHING,
         DUR_WEAK,
         DUR_DIMENSION_ANCHOR,
-        DUR_SPIRIT_HOWL,
         DUR_INFUSION,
         DUR_SONG_OF_SLAYING,
         STATUS_DRAINED,
@@ -4282,6 +4330,11 @@ void display_char_status()
         DUR_RECITE,
         DUR_GRASPING_ROOTS,
         DUR_FIRE_VULN,
+        DUR_POISON_VULN,
+        DUR_FROZEN,
+        DUR_SAP_MAGIC,
+        STATUS_MAGIC_SAPPED,
+        DUR_PORTAL_PROJECTILE,
     };
 
     status_info inf;
@@ -4623,8 +4676,7 @@ bool enough_hp(int minimum, bool suppress_msg, bool abort_macros)
     return true;
 }
 
-bool enough_mp(int minimum, bool suppress_msg,
-               bool abort_macros, bool include_items)
+bool enough_mp(int minimum, bool suppress_msg, bool abort_macros)
 {
     if (you.species == SP_DJINNI)
         return enough_hp(minimum * DJ_MP_RATE, suppress_msg);
@@ -4635,7 +4687,7 @@ bool enough_mp(int minimum, bool suppress_msg,
     {
         if (!suppress_msg)
         {
-            if (get_real_mp(include_items) < minimum)
+            if (get_real_mp(true) < minimum)
                 mpr("You haven't enough magic capacity.");
             else
                 mpr("You haven't enough magic at the moment.");
@@ -4838,9 +4890,6 @@ int get_real_hp(bool trans, bool rotted)
                    player_mutation_level(MUT_RUGGED_BROWN_SCALES) * 2 + 1 : 0)
                 - (player_mutation_level(MUT_FRAIL) * 10);
 
-    // Mutations that increase HP by a fixed value
-    hitp += 500 * sqr(player_mutation_level(MUT_EXOSKELETON));
-
     hitp /= 100;
 
     if (!rotted)
@@ -4983,8 +5032,7 @@ void contaminate_player(int change, bool controlled, bool msg)
         if (change > 0)
             xom_is_stimulated(new_level * 25);
 
-        if (old_level > 1 && new_level <= 1
-            && you.duration[DUR_INVIS] && !you.backlit())
+        if (old_level > 1 && new_level <= 1 && you.invisible())
         {
             mpr("You fade completely from view now that you are no longer "
                 "glowing from magical contamination.");
@@ -5056,14 +5104,15 @@ bool confuse_player(int amount, bool quiet)
     return true;
 }
 
-bool curare_hits_player(int death_source, int amount, const bolt &beam)
+bool curare_hits_player(int death_source, int amount, string name,
+                        string source_name)
 {
     ASSERT(!crawl_state.game_is_arena());
 
     if (player_res_poison() >= 3)
         return false;
 
-    if (!poison_player(amount, beam.get_source_name(), beam.name))
+    if (!poison_player(amount, source_name, name))
         return false;
 
     int hurted = 0;
@@ -5767,6 +5816,9 @@ void player::init()
     quiver.init(ENDOFPACK);
     sacrifice_value.init(0);
 
+    last_timer_effect.init(0);
+    next_timer_effect.init(20 * BASELINE_DELAY);
+
     is_undead       = US_ALIVE;
 
     friendly_pickup = 0;
@@ -5890,7 +5942,9 @@ void player::init()
     travel_ally_pace = false;
     received_weapon_warning = false;
     received_noskill_warning = false;
+    wizmode_teleported_into_rock = false;
     ash_init_bondage(this);
+    digging = false;
 
     delay_queue.clear();
 
@@ -6261,15 +6315,38 @@ void player::shield_block_succeeded(actor *foe)
 
 int player::missile_deflection() const
 {
-    if (duration[DUR_DEFLECT_MISSILES])
+    if (attribute[ATTR_DEFLECT_MISSILES])
         return 2;
-    if (duration[DUR_REPEL_MISSILES]
+    if (attribute[ATTR_REPEL_MISSILES]
         || player_mutation_level(MUT_DISTORTION_FIELD) == 3
         || scan_artefacts(ARTP_RMSL, true))
     {
         return 1;
     }
     return 0;
+}
+
+void player::ablate_deflection()
+{
+    int power;
+    if (attribute[ATTR_DEFLECT_MISSILES])
+    {
+        power = calc_spell_power(SPELL_DEFLECT_MISSILES, true);
+        if (one_chance_in(2 + power / 8))
+        {
+            attribute[ATTR_DEFLECT_MISSILES] = 0;
+            mprf(MSGCH_DURATION, "You feel less protected from missiles.");
+        }
+    }
+    else if (attribute[ATTR_REPEL_MISSILES])
+    {
+        power = calc_spell_power(SPELL_REPEL_MISSILES, true);
+        if (one_chance_in(2 + power / 8))
+        {
+            attribute[ATTR_REPEL_MISSILES] = 0;
+            mprf(MSGCH_DURATION, "You feel less protected from missiles.");
+        }
+    }
 }
 
 int player::unadjusted_body_armour_penalty() const
@@ -6511,6 +6588,7 @@ int player::armour_class() const
         case TRAN_BAT:
         case TRAN_PIG:
         case TRAN_PORCUPINE:
+        case TRAN_SHADOW:
             break;
 
         case TRAN_SPIDER: // low level (small bonus), also gets EV
@@ -6571,7 +6649,7 @@ int player::armour_class() const
     AC += _mut_level(MUT_YELLOW_SCALES, MUTACT_FULL)
           ? 100 + _mut_level(MUT_YELLOW_SCALES, MUTACT_FULL) * 100 : 0;        // +2, +3, +4
     AC += _mut_level(MUT_EXOSKELETON, MUTACT_FULL)
-          ? _mut_level(MUT_EXOSKELETON, MUTACT_FULL) * 100 : 0;                // +1, +2
+          ? sqr(_mut_level(MUT_EXOSKELETON, MUTACT_FULL)) * 100 : 0;           // +1, +4
 
     return AC / 100;
 }
@@ -6785,10 +6863,14 @@ int player::res_poison(bool temp) const
 
 int player::res_rotting(bool temp) const
 {
-    if (temp && (petrified() || form == TRAN_STATUE || form == TRAN_WISP))
+    if (temp
+        && (petrified() || form == TRAN_STATUE || form == TRAN_WISP
+            || form == TRAN_SHADOW))
+    {
         return 3;
+    }
 
-    if (species == SP_GARGOYLE)
+    if (species == SP_GARGOYLE || species == SP_VINE_STALKER)
         return 3;
 
     if (mutation[MUT_FOUL_STENCH])
@@ -6879,6 +6961,9 @@ int player_res_magic(bool calc_unid, bool temp)
 {
     int rm = 0;
 
+    if (temp && you.form == TRAN_SHADOW)
+        return MAG_IMMUNE;
+
     switch (you.species)
     {
     default:
@@ -6895,6 +6980,7 @@ int player_res_magic(bool calc_unid, bool temp)
         break;
     case SP_NAGA:
     case SP_MUMMY:
+    case SP_VINE_STALKER:
         rm = you.experience_level * 5;
         break;
     case SP_PURPLE_DRACONIAN:
@@ -6989,6 +7075,7 @@ bool player::tengu_flight() const
 bool player::nightvision() const
 {
     return is_undead
+           || (religion == GOD_DITHMENOS && piety >= piety_breakpoint(0))
            || (religion == GOD_YREDELEMNUL && piety >= piety_breakpoint(2));
 }
 
@@ -7050,8 +7137,8 @@ int player::hurt(const actor *agent, int amount, beam_type flavour,
     {
         const monster* mon = agent->as_monster();
         ouch(amount, mon->mindex(),
-             KILLED_BY_MONSTER, "", mon->visible_to(this), NULL,
-             attacker_effects);
+             flavour == BEAM_WATER ? KILLED_BY_WATER : KILLED_BY_MONSTER,
+             "", mon->visible_to(this), NULL, attacker_effects);
     }
     else
     {
@@ -7144,8 +7231,8 @@ void player::paralyse(actor *who, int str, string source)
     if (stasis_blocks_effect(true, true, "%s gives you a mild electric shock."))
         return;
 
-    if (!(who && who->as_monster() && who->as_monster()->type == MONS_RED_WASP)
-        && who && (duration[DUR_PARALYSIS] || duration[DUR_PARALYSIS_IMMUNITY]))
+    if (who && who->type != MONS_RED_WASP
+        && (duration[DUR_PARALYSIS] || duration[DUR_PARALYSIS_IMMUNITY]))
     {
         canned_msg(MSG_YOU_RESIST);
         return;
@@ -7461,7 +7548,8 @@ bool player::can_see_invisible() const
 
 bool player::invisible() const
 {
-    return duration[DUR_INVIS] && !backlit();
+    return (duration[DUR_INVIS] || you.form == TRAN_SHADOW)
+           && !backlit();
 }
 
 bool player::visible_to(const actor *looker) const
@@ -7509,7 +7597,7 @@ bool player::glows_naturally() const
 // This is the imperative version.
 void player::backlight()
 {
-    if (!duration[DUR_INVIS])
+    if (!duration[DUR_INVIS] && you.form != TRAN_SHADOW)
     {
         if (duration[DUR_CORONA] || glows_naturally())
             mpr("You glow brighter.");
@@ -7569,7 +7657,8 @@ bool player::can_bleed(bool allow_tran) const
         // These transformations don't bleed. Lichform is handled as undead.
         if (form == TRAN_STATUE || form == TRAN_ICE_BEAST
             || form == TRAN_SPIDER || form == TRAN_TREE
-            || form == TRAN_FUNGUS || form == TRAN_PORCUPINE)
+            || form == TRAN_FUNGUS || form == TRAN_PORCUPINE
+            || form == TRAN_SHADOW)
         {
             return false;
         }

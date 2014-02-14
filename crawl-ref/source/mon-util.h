@@ -10,7 +10,6 @@
 #include "enum.h"
 #include "mon-enum.h"
 #include "player.h"
-#include "mon-mst.h"
 
 struct bolt;
 
@@ -89,20 +88,24 @@ struct mon_energy_usage
         me.pickup_percent = combine(pickup_percent, o.pickup_percent, 100);
         return me;
     }
+
+    bool operator == (const mon_energy_usage &rvalue) const
+    {
+        return move == rvalue.move
+               && swim == rvalue.swim
+               && attack == rvalue.attack
+               && missile == rvalue.missile
+               && spell == rvalue.spell
+               && special == rvalue.special
+               && item == rvalue.item
+               && pickup_percent == rvalue.pickup_percent;
+    }
 private:
     static uint8_t combine(uint8_t a, uint8_t b, uint8_t def = 10)
     {
         return b != def? b : a;
     }
 };
-
-struct mon_spellbook
-{
-    mon_spellbook_type type;
-    spell_type spells[NUM_MONSTER_SPELL_SLOTS];
-};
-
-extern const mon_spellbook mspell_list[];
 
 struct monsterentry
 {
@@ -142,7 +145,7 @@ struct monsterentry
 
     int8_t AC; // armour class
     int8_t ev; // evasion
-    mon_spellbook_type sec;
+    int sec;   // actually mon_spellbook_type
     corpse_effect_type corpse_thingy;
     zombie_size_type   zombie_size;
     shout_type         shouts;
@@ -243,8 +246,10 @@ void discover_shifter(monster* shifter);
 bool mons_is_statue(monster_type mc, bool allow_disintegrate = false);
 bool mons_is_demon(monster_type mc);
 bool mons_is_draconian(monster_type mc);
+bool mons_is_demonspawn(monster_type mc);
 bool mons_is_conjured(monster_type mc);
 bool mons_is_beast(monster_type mc);
+bool mons_is_avatar(monster_type mc);
 int mons_demon_tier(monster_type mc);
 
 bool mons_class_wields_two_weapons(monster_type mc);
@@ -269,6 +274,7 @@ bool mons_zombifiable(monster_type mc);
 
 int mons_weight(monster_type mc);
 int mons_class_base_speed(monster_type mc);
+mon_energy_usage mons_class_energy(monster_type mc);
 int mons_class_zombie_base_speed(monster_type zombie_base_mc);
 int mons_base_speed(const monster* mon);
 
@@ -305,6 +311,7 @@ int mons_class_colour(monster_type mc);
 
 monster_type royal_jelly_ejectable_monster();
 monster_type random_draconian_monster_species();
+monster_type random_demonspawn_monster_species();
 
 bool init_abomination(monster* mon, int hd);
 void define_monster(monster* mons);
@@ -322,8 +329,6 @@ bool mons_has_known_ranged_attack(const monster* mon);
 bool mons_can_attack(const monster* mon);
 bool mons_has_incapacitating_spell(const monster* mon, const actor* foe);
 bool mons_has_incapacitating_ranged_attack(const monster* mon, const actor* foe);
-
-vector<mon_spellbook_type> mons_spellbook_list(monster_type mon);
 
 const char *mons_pronoun(monster_type mon_type, pronoun_type variant,
                          bool visible = true);
@@ -348,7 +353,6 @@ bool mons_is_wandering(const monster* m);
 bool mons_is_seeking(const monster* m);
 bool mons_is_fleeing(const monster* m);
 bool mons_is_retreating(const monster* m);
-bool mons_is_panicking(const monster* m);
 bool mons_is_cornered(const monster* m);
 bool mons_is_lurking(const monster* m);
 bool mons_is_batty(const monster* m);
@@ -364,7 +368,7 @@ bool mons_eats_corpses(const monster* mon);
 bool mons_eats_food(const monster* mon);
 monster_type mons_genus(monster_type mc);
 monster_type mons_species(monster_type mc);
-monster_type draco_subspecies(const monster* mon);
+monster_type draco_or_demonspawn_subspecies(const monster* mon);
 monster_type mons_detected_base(monster_type mt);
 
 bool mons_looks_stabbable(const monster* m);
@@ -387,6 +391,8 @@ bool herd_monster(const monster* mon);
 
 int cheibriados_monster_player_speed_delta(const monster* mon);
 bool cheibriados_thinks_mons_is_fast(const monster* mon);
+bool mons_is_illuminating(const monster* mon);
+bool mons_is_fiery(const monster* mon);
 bool mons_is_projectile(monster_type mc);
 bool mons_is_projectile(const monster* mon);
 bool mons_is_boulder(const monster* mon);
@@ -414,6 +420,8 @@ colour_t random_monster_colour();
 int ugly_thing_colour_offset(colour_t colour);
 string  draconian_colour_name(monster_type mon_type);
 monster_type draconian_colour_by_name(const string &colour);
+string  demonspawn_base_name(monster_type mon_type);
+monster_type demonspawn_base_by_name(const string &colour);
 
 monster_type random_monster_at_grid(const coord_def& p, bool species = false);
 

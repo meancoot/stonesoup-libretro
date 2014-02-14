@@ -136,7 +136,7 @@ monster_type monster_picker::pick_with_veto(const pop_entry *weights,
 // stored veto function. Can subclass further for more complex veto behaviour.
 bool monster_picker::veto(monster_type mon)
 {
-    return _veto && _veto(mon);
+    return _veto && (invalid_monster_type(mon) || _veto(mon));
 }
 
 bool positioned_monster_picker::veto(monster_type mon)
@@ -227,6 +227,13 @@ const pop_entry* fish_population(branch_type br, bool lava)
         return population_lava[br].pop;
     else
         return population_water[br].pop;
+}
+
+const pop_entry* zombie_population(branch_type br)
+{
+    COMPILE_CHECK(ARRAYSZ(population_zombie) == NUM_BRANCHES);
+    ASSERT_RANGE(br, 0, NUM_BRANCHES);
+    return population_zombie[br].pop;
 }
 
 #if defined(DEBUG_DIAGNOSTICS) || defined(DEBUG_TESTS)

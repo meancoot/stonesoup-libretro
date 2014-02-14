@@ -69,6 +69,10 @@ unseen Blinkbolt cast
 
 Living lightning bursts into view!
 %%%%
+branch summon cast prefix
+
+@The_monster@ calls forth creatures from
+%%%%
 Flame Tongue cast
 
 @The_monster@ issues a gush of flame.
@@ -179,9 +183,21 @@ Haste Plants cast
 
 @The_monster@ empowers the plants around itself!
 %%%%
+Major Destruction cast
+
+@The_monster@ conjures a destructive force in the name of @possessive_God@!
+%%%%
 Druid's Call cast
 
 @The_monster@ calls out to the beasts of the land!
+%%%%
+Legendary Destruction cast
+
+@The_monster@ offers @possessive@ life energy for powerful magic!
+%%%%
+Ephemeral Infusion cast
+
+@The_monster@ gestures around itself.
 #####################################################
 # Individual innate spells (breathing and spitting).
 #####################################################
@@ -401,10 +417,6 @@ Minor Healing dryad cast
 
 @The_monster@ draws upon the vitality of nature.
 %%%%
-Primal Wave elemental wellspring cast
-
-A great wave of water rises up around @The_monster@!
-%%%%
 Cause Fear satyr cast
 
 @The_monster@ plays a frightful melody on his pipes!
@@ -412,6 +424,10 @@ Cause Fear satyr cast
 Sleep satyr cast
 
 @The_monster@ plays a lulling melody on his pipes!
+%%%%
+Metal Splinters war gargoyle cast
+
+@The_monster@ launches @beam@ @at@ @target@.
 ########################################################################
 # Monster species and genus messages.
 ########################################################################
@@ -488,6 +504,14 @@ shedu cast
 shedu cast targeted
 
 @The_monster@ beseeches @possessive_God@ to heal @possessive@ mate!
+%%%%
+Shock shock serpent cast
+
+@The_monster@ discharges a narrow tendril of electricity.
+%%%%
+Static Discharge shock serpent cast
+
+@The_monster@ crackles with electricity!
 ###########################################################################
 # Generic messages for priests and wizards which have been polymorphed into
 # something without hands.

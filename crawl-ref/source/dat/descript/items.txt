@@ -90,11 +90,9 @@ A long pole with an enormous, cleaving blade on one end.
 %%%%
 bastard sword
 
-A long, large sword. A grown-up human or elf can manage to wield it in one
-hand, while anyone of a weaker race will need to grip it with two. In fact, it
-is the heaviest and most damaging weapon anyone other than certain humanoid
-insects can use with a shield. And meeting a sharp blade this long spells doom
-for any opponent.
+A long, large sword. In fact, it is one of the heaviest and most damaging
+weapon most races can use with a shield. And meeting a sharp blade this long
+spells doom for any opponent.
 %%%%
 battleaxe
 
@@ -443,10 +441,6 @@ A small piece of wood and metal, to be strapped on one arm for defence. It is
 somewhat cumbersome to wear, and, without a little training, slightly slows the
 rate at which a warrior attacks.
 %%%%
-cap
-
-A cloth or leather cap.
-%%%%
 centaur barding
 
 An armour made for centaurs, to wear over their equine half.
@@ -742,6 +736,10 @@ A tool for rending apart the fibres of wood, or flesh. It might be enough if
 you care primarily for the weapon's weight, but for a proper rampage, you want
 something bigger.
 %%%%
+hat
+
+A cloth or leather hat.
+%%%%
 helmet
 
 A piece of metal headgear.
@@ -800,8 +798,9 @@ a small cost attached.
 large rock
 
 A very large and very heavy stone. {{
-    if string.find(you.race(), "Ogre")
+    if you.race() == "Ogre"
        or you.race() == "Troll"
+       or you.race() == "Formicid"
    then
        return ""
    else
@@ -813,8 +812,7 @@ A very large and very heavy stone. {{
 large shield
 
 A large piece of wood and metal, to be strapped on one arm for defence. {{
-    if string.find(you.race(), "Ogre")
-       or string.find(you.race(), "Draconian")
+    if you.race() == "Ogre"
        or you.race() == "Troll"
     then
         return "It looks like it would fit you well."
@@ -1200,8 +1198,9 @@ This ring allows its wearer to see those things hidden from view by magic.
 %%%%
 ring of slaying
 
-This ring increases or decreases the melee and ranged combat skills of its
-wearer.
+This ring increases or decreases the wearer's effectiveness with ranged weapons
+and melee attacks. It has two enchantment levels, affecting accuracy and damage
+respectively.
 %%%%
 ring of strength
 
@@ -1254,7 +1253,7 @@ This rod contains a varied set of spells of mayhem and destruction.
 %%%%
 rod of fiery destruction
 
-This rod contains spells that launch destructive fire against your enemies.
+This rod allows its wielder to launch a fiery bolt of explosive energy.
 %%%%
 rod of frigid destruction
 
@@ -1653,16 +1652,6 @@ A mesh of ropes knotted together with weights around the edge. Originally used
 by hunters to entangle and entrap prey, it soon found obvious application in
 battle and gladiatorial arenas. Struggling victims can eventually destroy the
 net and break free, if they live long enough.
-{{
-    if you.race() == "Halfling"
-        or you.race() == "Kobold"
-        or you.race() == "Spriggan"
-    then
-        return "Unfortunately, it is too large and awkward for you to use."
-    else
-        return ""
-    end
-}}
 %%%%
 tomahawk
 
@@ -1794,10 +1783,6 @@ whip
 A long plaited strip of leather. Originally developed for use in disagreements
 with cattle, this simple weapon is now widely used to settle differences
 between all sorts of creatures.
-%%%%
-wizard hat
-
-A conical cloth hat.
 %%%%
 young poisoner's handbook
 

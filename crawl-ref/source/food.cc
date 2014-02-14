@@ -1485,7 +1485,7 @@ int prompt_eat_chunks(bool only_auto)
 
             const bool bad = is_bad_food(*item);
 
-            if (easy_eat && !bad)
+            if (easy_eat && !bad && i_feel_safe())
             {
                 // If this chunk is safe to eat, just do so without prompting.
                 autoeat = true;
@@ -2226,8 +2226,11 @@ bool can_ingest(const item_def &food, bool suppress_msg, bool check_hunger)
             return false;
         }
     }
+    // special case mutagenic chunks to skip hunger checks, as they don't give
+    // nutrition and player can get hungry by using spells etc. anyway
     return can_ingest(food.base_type, food.sub_type, suppress_msg,
-                      check_hunger, food_is_rotten(food));
+                      is_mutagenic(food) ? false : check_hunger,
+                      food_is_rotten(food));
 }
 
 bool can_ingest(int what_isit, int kindof_thing, bool suppress_msg,

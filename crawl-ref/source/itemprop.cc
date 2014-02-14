@@ -122,10 +122,12 @@ static const armour_def Armour_prop[NUM_ARMOURS] =
     { ARM_HELMET,               "helmet",                 1,   0,   80,
         EQ_HELMET,      SIZE_SMALL,  SIZE_MEDIUM },
 
+#if TAG_MAJOR_VERSION == 34
     { ARM_CAP,                  "cap",                    0,   0,   40,
         EQ_HELMET,      SIZE_LITTLE, SIZE_LARGE },
+#endif
 
-    { ARM_WIZARD_HAT,           "wizard hat",             0,   0,   40,
+    { ARM_HAT,                  "hat",                    0,   0,   40,
         EQ_HELMET,      SIZE_LITTLE, SIZE_LARGE },
 
     // Note that barding size is compared against torso so it currently
@@ -492,6 +494,9 @@ void do_curse_item(item_def &item, bool quiet)
     {
         if (!quiet)
         {
+            const bool was_known = is_artefact(item)
+                                 ? artefact_known_wpn_property(item, ARTP_BRAND)
+                                 : item_ident(item, ISFLAG_KNOW_TYPE);
             mprf("Your %s glows black briefly, but repels the curse.",
                  item.name(DESC_PLAIN).c_str());
             if (is_artefact(item))
@@ -499,7 +504,8 @@ void do_curse_item(item_def &item, bool quiet)
             else
                 set_ident_flags(item, ISFLAG_KNOW_TYPE);
 
-            mprf_nocap("%s", item.name(DESC_INVENTORY_EQUIP).c_str());
+            if (!was_known)
+                mprf_nocap("%s", item.name(DESC_INVENTORY_EQUIP).c_str());
         }
         return;
     }
@@ -889,7 +895,7 @@ void set_equip_race(item_def &item, iflags_t flags)
             break;
         case OBJ_ARMOUR:
             if (get_armour_slot(item) == EQ_HELMET && !is_hard_helmet(item)
-                && item.sub_type != ARM_WIZARD_HAT)
+                && item.sub_type != ARM_HAT)
             {
                 return;
             }
@@ -1648,6 +1654,30 @@ skill_type range_skill(object_class_type wclass, int wtype)
     return range_skill(wpn);
 }
 
+//True if item is a staff that deals extra damage based on Evocations skill.
+static bool _staff_uses_evocations(const item_def &item)
+{
+    if (is_unrandom_artefact(item) && item.special == UNRAND_ELEMENTAL_STAFF)
+        return true;
+
+    if (!item_type_known(item) || item.base_type != OBJ_STAVES)
+        return false;
+
+    switch (item.sub_type)
+    {
+    case STAFF_FIRE:
+    case STAFF_COLD:
+    case STAFF_POISON:
+    case STAFF_DEATH:
+    case STAFF_SUMMONING:
+    case STAFF_AIR:
+    case STAFF_EARTH:
+        return true;
+    default:
+        return false;
+    }
+}
+
 // Check whether an item can be easily and quickly equipped. This needs to
 // know which slot we're considering for cases like where we're already
 // wielding a cursed non-weapon.
@@ -1747,8 +1777,11 @@ bool item_skills(const item_def &item, set<skill_type> &skills)
     }
 
     // Evokables that don't need to be equipped.
-    if (item_is_evokable(item, false, false, false, false, true))
+    if (item_is_evokable(item, false, false, false, false, true)
+        || _staff_uses_evocations(item))
+    {
         skills.insert(SK_EVOCATIONS);
+    }
 
     // Item doesn't have to be equipped, but if it isn't, it needs to be easy
     // and quick to equip. This means:
@@ -2106,7 +2139,7 @@ bool is_fruit(const item_def & item)
 
 bool food_is_rotten(const item_def &item)
 {
-    return (item.special <= ROTTING_CORPSE)
+    return item.special <= ROTTING_CORPSE
                                     && (item.base_type == OBJ_CORPSES
                                        && item.sub_type == CORPSE_BODY
                                     || item.base_type == OBJ_FOOD

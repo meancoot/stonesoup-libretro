@@ -19,11 +19,12 @@ msc += $danger:Forgetting.* will destroy the book
 msc += $danger:The blast of calcifying dust hits you!
 msc += $danger:you are engulfed in calcifying dust
 msc += $danger:is moving more slowly
-msc += $danger:^It .* you
+msc += $danger:^Something .* you
 msc += $danger:you block its attack
 msc += $danger:constricts you
 msc += $danger:you convulse
 msc += $danger:You feel a build-up of mutagenic energy
+msc += $danger:place you under penance
 
 msc += $item_dmg:acid corrodes
 msc += $item_dmg:catch(es)? fire
@@ -98,3 +99,6 @@ force_more_message += crackle of arcane power
 # Abyss exits and rune
 force_more_message += Found a gateway leading out of the Abyss
 force_more_message += Found .* abyssal rune of Zot
+
+# Generally exciting things that are somewhat automated
+force_more_message += You pick up the .* rune and feel its power

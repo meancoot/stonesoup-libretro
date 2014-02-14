@@ -9,6 +9,7 @@
 #include "areas.h"
 #include "branch.h"
 #include "chardump.h"
+#include "colour.h"
 #include "coordit.h"
 #include "delay.h"
 #include "dgn-overview.h"
@@ -655,7 +656,7 @@ void down_stairs(dungeon_feature_type force_stair, bool force_known_shaft)
                              || (force_stair == DNGN_TRAP_SHAFT
                                  && force_known_shaft);
     // Latter case is falling down a shaft.
-    const bool shaft = known_shaft || (force_stair == DNGN_TRAP_SHAFT);
+    const bool shaft = known_shaft || force_stair == DNGN_TRAP_SHAFT;
     level_id shaft_dest;
 
     // Up and down both work for portals.
@@ -711,7 +712,7 @@ void down_stairs(dungeon_feature_type force_stair, bool force_known_shaft)
         handle_items_on_shaft(you.pos(), false);
 
         string howfar;
-        if (force_stair && (shaft_depth > 1))
+        if (force_stair && shaft_depth > 1)
             howfar = make_stringf(" for %d floors", shaft_depth);
 
         if (!you.flight_mode() || force_stair)
@@ -777,12 +778,12 @@ void down_stairs(dungeon_feature_type force_stair, bool force_known_shaft)
         shuffle_array(runes);
         mprf("You insert the %s rune into the lock.", rune_type_name(runes[0]));
 #ifdef USE_TILE_LOCAL
-        tiles.add_overlay(you.pos(), tileidx_zap(GREEN));
+        tiles.add_overlay(you.pos(), tileidx_zap(rune_colour(runes[0])));
         update_screen();
 #else
-        flash_view(LIGHTGREEN);
+        flash_view(rune_colour(runes[0]));
 #endif
-        mpr("The lock glows an eerie green colour!");
+        mpr("The lock glows eerily!");
         more();
 
         mprf("You insert the %s rune into the lock.", rune_type_name(runes[1]));

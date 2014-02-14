@@ -1209,7 +1209,7 @@ MAP
 .c.cccc.
 .c.22.c.
 .c2..2c.
-.cc~~cc.
+.cc..cc.
 ........
 ENDMAP
 
@@ -1699,7 +1699,7 @@ FTILE:  *|_1+'c = floor_hall
 FTILE:  # = floor_rough_lightred
 MARKER:  # = lua:fog_machine { cloud_type = "flame", \
                 pow_min = 10, pow_max = 10, delay = 10, \
-                size = 1, walk_dist = 0, start_clouds = 1, excl_rad = -1 }
+                size = 1, walk_dist = 0, start_clouds = 1, excl_rad = 0 }
 SUBST:  '# = .
 MAP
 .................
@@ -1828,8 +1828,8 @@ KMONS:   0 = orc ; robe race:orcish . wand of confusion | wand of slowing w:35 |
                    wand of magic darts w:35 | wand of flame | wand of frost . \
                    potion of invisibility | potion of speed | nothing w:980
 KMONS:   89 = deep elf mage
-KITEM:   8d = robe / robe race:orcish, wizard hat w:40 / wizard hat good_item, \
-              wizard hat w:20 / wizard hat good_item
+KITEM:   8d = robe / robe race:orcish, hat w:40 / hat good_item, \
+              hat w:20 / hat good_item
 KITEM:   9e = book of minor magic
 SUBST:   - = +
 KMASK:   de89 = no_item_gen
@@ -1839,7 +1839,7 @@ FTILE:   F = floor_pebble_lightred
 {{
   local fog = chained_fog_machine {
                             cloud_type = 'flame', pow_min = 6, pow_max = 6,
-                            delay = 100, size = 1, walk_dist = 0, excl_rad = -1
+                            delay = 100, size = 1, walk_dist = 0, excl_rad = 0
                           }
   lua_marker('F', fog)
 }}
@@ -2101,7 +2101,7 @@ MONS:     wizard spells:venom_bolt;iskenderun's_mystic_blast;invisibility;\
 # Cloud.
 MONS:     tengu reaver spells:venom_bolt;.;iskenderun's_battlesphere;\
                               poisonous_cloud;iskenderun's_battlesphere;blink
-ITEM:     book of Power, robe good_item, wizard hat good_item, robe, wizard hat
+ITEM:     book of Power, robe good_item, hat good_item, robe, hat
 KFEAT:    _ = altar_vehumet
 SHUFFLE: ef, gh, ij
 MAP
@@ -2157,6 +2157,45 @@ MAP
   xccccc2ccccccccccccxx
   xxcccccccccxxxxxxxxx
    xxxxxxxxxxx
+ENDMAP
+
+NAME:   cheibrodos_orc_bank
+TAGS:   no_item_gen no_monster_gen
+DEPTH:  Orc:1-3, D:10-14
+ORIENT: float
+MONS:   orc, orc warrior, orc knight, hobgoblin
+KITEM:  $ = $ no_pickup
+SUBST:  ? = $., " = .14
+MAP
+cccccccccccccccc
+cccccccccccc???c
+cc22+.....3+???c
+cc..cccccccc???c
+cc..cccccccc???c
+cc..c......c???c
+cc..+......c???c
+ccccc1.1.1.c???c
+cccccmmmmm+ccccc
+    c""""""c
+    c""""""c
+    c""""""c
+    cc+cc+cc
+    ...@....
+ENDMAP
+
+NAME:  cheibrodos_gnoll_hut
+DEPTH: D:2-5
+TAGS:  no_item_gen no_monster_gen
+MONS:  gnoll, hound, bush
+KFEAT: S = known shaft trap
+MAP
+...@...
+..3.3..
+xxx+xxx
+x%+...x
+xxx2.2x
+xS+.1.x
+xxxxxxx
 ENDMAP
 
 ################################################################################
@@ -5084,7 +5123,7 @@ DEPTH:  Depths
 WEIGHT: 3
 MONS:   patrolling crystal golem name:crystal_guardian n_rpl n_des spells:bolt_of_fire;bolt_of_cold
 MONS:   orange crystal statue
-ITEM:   cap unrand:crown_of_dyrovepreva no_pickup
+ITEM:   hat unrand:crown_of_dyrovepreva no_pickup
 KPROP:  12d' = no_rtele_into
 SUBST:  ' = .
 MAP

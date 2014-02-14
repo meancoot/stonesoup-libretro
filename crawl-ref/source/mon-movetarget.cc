@@ -296,8 +296,8 @@ bool pacified_leave_level(monster* mon, vector<level_exit> e, int e_index)
     return false;
 }
 
-// Counts deep water twice.
-static int _count_water_neighbours(coord_def p)
+// Counts deep water twice (and reports if any is found).
+static int _count_water_neighbours(coord_def p, bool& deep)
 {
     int water_count = 0;
     for (adjacent_iterator ai(p); ai; ++ai)
@@ -305,7 +305,10 @@ static int _count_water_neighbours(coord_def p)
         if (grd(*ai) == DNGN_SHALLOW_WATER)
             water_count++;
         else if (grd(*ai) == DNGN_DEEP_WATER)
+        {
             water_count += 2;
+            deep = true;
+        }
     }
     return water_count;
 }
@@ -317,12 +320,20 @@ bool find_siren_water_target(monster* mon)
     ASSERT(mon->type == MONS_SIREN);
 
     // Moving away could break the entrancement, so don't do this.
-    if ((mon->pos() - you.pos()).rdist() >= 6)
+    if (distance2(mon->pos(), you.pos()) >= 6 * 6 + 1)
+    {
+        mon->firing_pos.reset();
         return false;
+    }
+
+    bool deep;
 
     // Already completely surrounded by deep water.
-    if (_count_water_neighbours(mon->pos()) >= 16)
+    if (_count_water_neighbours(mon->pos(), deep) >= 16)
+    {
+        mon->firing_pos = mon->pos();
         return true;
+    }
 
     if (mon->travel_target == MTRAV_SIREN)
     {
@@ -339,6 +350,8 @@ bool find_siren_water_target(monster* mon)
     coord_def best_target;
     bool first = true;
 
+    deep = false;
+
     while (true)
     {
         int best_num = 0;
@@ -354,7 +367,7 @@ bool find_siren_water_target(monster* mon)
                 continue;
 
             // Counts deep water twice.
-            const int water_count = _count_water_neighbours(*ri);
+            const int water_count = _count_water_neighbours(*ri, deep);
             if (water_count < best_water_count)
                 continue;
 
@@ -381,7 +394,7 @@ bool find_siren_water_target(monster* mon)
             }
         }
 
-        if (!first || best_water_count > 0)
+        if (!first || deep)
             break;
 
         // Else start the second iteration.
@@ -393,7 +406,10 @@ bool find_siren_water_target(monster* mon)
 
     // We're already optimally placed.
     if (best_target == mon->pos())
+    {
+        mon->firing_pos = mon->pos();
         return true;
+    }
 
     monster_pathfind mp;
 #ifdef WIZARD
@@ -419,7 +435,7 @@ bool find_siren_water_target(monster* mon)
                  best_target.x, best_target.y, best_water_count);
 #endif
             // Okay then, we found a path.  Let's use it!
-            mon->target = mon->travel_path[0];
+            mon->firing_pos = mon->travel_path[0];
             mon->travel_target = MTRAV_SIREN;
             return true;
         }
@@ -902,7 +918,7 @@ void check_wander_target(monster* mon, bool isPacified)
     // default wander behaviour
     if (mon->pos() == mon->target
         || mons_is_batty(mon)
-        || !isPacified && one_chance_in(20) && mon->type != MONS_BATTLESPHERE
+        || (!isPacified && !mons_is_avatar(mon->type) && one_chance_in(20))
         || herd_monster(mon) && !_herd_ok(mon)
         || !_band_ok(mon))
     {

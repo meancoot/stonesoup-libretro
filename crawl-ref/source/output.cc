@@ -803,6 +803,7 @@ static void _print_stats_wp(int y)
             col = GREEN;
             break;
         case TRAN_LICH:
+        case TRAN_SHADOW:
             col = MAGENTA;
             break;
         case TRAN_BAT:
@@ -943,9 +944,10 @@ static void _get_status_lights(vector<status_light>& out)
         STATUS_MISSILES,
         STATUS_REGENERATION,
         DUR_BERSERK,
+        STATUS_DIG,
         DUR_RESISTANCE,
         STATUS_AIRBORNE,
-        DUR_INVIS,
+        STATUS_INVISIBLE,
         DUR_CONTROL_TELEPORT,
         DUR_DISJUNCTION,
         DUR_SILENCE,
@@ -1003,7 +1005,6 @@ static void _get_status_lights(vector<status_light>& out)
         DUR_WEAK,
         DUR_DIMENSION_ANCHOR,
         STATUS_BEOGH,
-        DUR_SPIRIT_HOWL,
         DUR_INFUSION,
         DUR_SONG_OF_SLAYING,
         STATUS_DRAINED,
@@ -1012,7 +1013,13 @@ static void _get_status_lights(vector<status_light>& out)
         DUR_RECITE,
         DUR_GRASPING_ROOTS,
         DUR_FIRE_VULN,
+        DUR_FROZEN,
+        DUR_SAP_MAGIC,
+        STATUS_MAGIC_SAPPED,
         STATUS_ELIXIR,
+        DUR_BARBS,
+        DUR_POISON_VULN,
+        DUR_PORTAL_PROJECTILE,
     };
 
     status_info inf;
@@ -1659,29 +1666,40 @@ int update_monster_pane()
 }
 #endif
 
-static const char* _itosym1(int stat)
+// Converts a numeric resistance to its symbolic counterpart.
+// Can handle any maximum level. The default is for single level resistances
+// (the most common case). Negative resistances are allowed.
+// Resistances with a maximum of up to 4 are spaced (arbitrary choice), and
+// starting at 5 levels, they are continuous.
+// params:
+//  level : actual resistance level
+//  max : maximum number of levels of the resistance
+static string _itosym(int level, int max = 1)
 {
-    return (stat >= 1) ? "+  " :
-           (stat == 0) ? ".  " :
-                         "x  ";
-}
+    if (max < 1)
+        return "";
 
-static const char* _itosym2(int stat)
-{
-    return (stat >= 2) ? "+ +" :
-           (stat == 1) ? "+ ." :
-                         ". .";
-}
+    string sym;
+    bool spacing = (max >= 5) ? false : true;
 
-static const char* _itosym3(int stat)
-{
-    return (stat >=  3) ? "+ + +" :
-           (stat ==  2) ? "+ + ." :
-           (stat ==  1) ? "+ . ." :
-           (stat ==  0) ? ". . ." :
-           (stat == -1) ? "x . ." :
-           (stat == -2) ? "x x ." :
-                          "x x x";
+    while (max > 0)
+    {
+        if (level == 0)
+            sym += ".";
+        else if (level > 0)
+        {
+            sym += "+";
+            --level;
+        }
+        else // negative resistance
+        {
+            sym += "x";
+            ++level;
+        }
+        sym += (spacing) ? " " : "";
+        --max;
+    }
+    return sym;
 }
 
 static const char *s_equip_slot_names[] =
@@ -1730,6 +1748,10 @@ int equip_name_to_slot(const char *s)
 // Take maximum possible level into account.
 static const char* _determine_colour_string(int level, int max_level)
 {
+    // No colouring for larger bars.
+    if (max_level > 3)
+        return "<lightgrey>";
+
     switch (level)
     {
     case 3:
@@ -2167,106 +2189,114 @@ static vector<formatted_string> _get_overview_stats()
     return cols1.formatted_lines();
 }
 
+// generator of resistance strings:
+// params :
+//      name : name of the resist, correct spacing is handled here
+//      spacing : width of the name column
+//      value : actual value of the resistance (can be negative)
+//      max : maximum value of the resistance (for color AND representation),
+//          default is the most common case (1)
+//      pos_resist : false for "bad" resistances (no tele, random tele, *Rage),
+//          inverts the value for the colour choice
+static string _resist_composer(
+    const char * name, int spacing, int value, int max = 1, bool pos_resist = true)
+{
+    string out;
+    out += _determine_colour_string(pos_resist ? value : -value, max);
+    out += chop_string(name, spacing);
+    out += _itosym(value, max);
+
+    return out;
+}
+
 static vector<formatted_string> _get_overview_resistances(
     vector<char> &equip_chars, bool calc_unid, int sw)
 {
-    char buf[1000];
-
     // 3 columns, splits at columns 18, 33
     column_composer cols(3, 18, 33);
+    // First column, resist name is 7 chars
+    int cwidth = 7;
+    string out;
 
     const int rfire = player_res_fire(calc_unid);
+    out += _resist_composer("rFire", cwidth, rfire, 3) + "\n";
+
     const int rcold = player_res_cold(calc_unid);
+    out += _resist_composer("rCold", cwidth, rcold, 3) + "\n";
+
     const int rlife = player_prot_life(calc_unid);
+    out += _resist_composer("rNeg", cwidth, rlife, 3) + "\n";
+
     const int rpois = player_res_poison(calc_unid);
+    out += _resist_composer("rPois", cwidth, rpois) + "\n";
+
     const int relec = player_res_electricity(calc_unid);
+    out += _resist_composer("rElec", cwidth, relec) + "\n";
+
     const int rsust = player_sust_abil(calc_unid);
+    out += _resist_composer("SustAb", cwidth, rsust, 2) + "\n";
+
     const int rmuta = (you.rmut_from_item(calc_unid)
                        || player_mutation_level(MUT_MUTATION_RESISTANCE) == 3);
-    snprintf(buf, sizeof buf,
-             "%srFire  %s\n"
-             "%srCold  %s\n"
-             "%srNeg   %s\n"
-             "%srPois  %s\n"
-             "%srElec  %s\n"
-             "%sSustAb %s\n"
-             "%srMut   %s\n"
-             ,
-             _determine_colour_string(rfire, 3), _itosym3(rfire),
-             _determine_colour_string(rcold, 3), _itosym3(rcold),
-             _determine_colour_string(rlife, 3), _itosym3(rlife),
-             _determine_colour_string(rpois, 1), _itosym1(rpois),
-             _determine_colour_string(relec, 1), _itosym1(relec),
-             _determine_colour_string(rsust, 2), _itosym2(rsust),
-             _determine_colour_string(rmuta, 1), _itosym1(rmuta));
-    cols.add_formatted(0, buf, false);
+    out += _resist_composer("rMut", cwidth, rmuta) + "\n";
 
     const int saplevel = player_mutation_level(MUT_SAPROVOROUS);
     const bool show_gourm = (you.species != SP_MUMMY
                              && you.species != SP_VAMPIRE
                              && player_mutation_level(MUT_HERBIVOROUS) < 3
                              && you.gourmand());
+    out += _resist_composer(show_gourm ? "Gourm" : "Saprov",
+                            cwidth,
+                            show_gourm ? 1 : saplevel,
+                            show_gourm ? 1 : 3) + "\n";
 
-    snprintf(buf, sizeof buf, "%s%s %s",
-             _determine_colour_string(
-                 show_gourm ? 1 : saplevel, show_gourm ? 1 : 3),
-             show_gourm ? "Gourm "  : "Saprov",
-             show_gourm ? _itosym1(1) : _itosym3(saplevel));
+    const int rmagi = player_res_magic(calc_unid) / 40;
+    out += _resist_composer("MR", cwidth, rmagi, 5) + "\n";
 
-    cols.add_formatted(0, buf, false);
+    cols.add_formatted(0, out, false);
 
+    // Second column, resist name is 9 chars
+    out.clear();
+    cwidth = 9;
     const int rinvi = you.can_see_invisible(calc_unid);
-    // TODO: Also show *Rage in clarity line
-    const int rclar = you.clarity(calc_unid);
-    const int rcons = you.conservation(calc_unid);
-    const int rcorr = you.res_corr(calc_unid);
-    const int rrott = you.res_rotting();
-    const int rspir = you.spirit_shield(calc_unid);
-    const int rward = you.warding(calc_unid);
-    snprintf(buf, sizeof buf,
-             "%sSeeInvis %s\n"
-             "%sClarity  %s\n"
-             "%sConserve %s\n"
-             "%srCorr    %s\n"
-             "%srRot     %s\n"
-             "%sSpirit   %s\n"
-             "%sWarding  %s\n"
-             ,
-             _determine_colour_string(rinvi, 1), _itosym1(rinvi),
-             _determine_colour_string(rclar, 1), _itosym1(rclar),
-             _determine_colour_string(rcons, 1), _itosym1(rcons),
-             _determine_colour_string(rcorr, 1), _itosym1(rcorr),
-             _determine_colour_string(rrott, 1), _itosym1(rrott),
-             _determine_colour_string(rspir, 1), _itosym1(rspir),
-             _determine_colour_string(rward, 1), _itosym1(rward));
-    cols.add_formatted(1, buf, false);
+    out += _resist_composer("SeeInvis", cwidth, rinvi) + "\n";
 
+    const int rclar = you.clarity(calc_unid);
     const int stasis = you.stasis(calc_unid);
+    // TODO: what about different levels of anger/berserkitis?
+    const bool show_angry = (you.angry(calc_unid)
+                             || player_mutation_level(MUT_BERSERK))
+                            && !rclar && !stasis;
+    out += show_angry ? _resist_composer("Rnd*Rage", cwidth, 1, 1, false) + "\n"
+                      : _resist_composer("Clarity", cwidth, rclar) + "\n";
+
+    const int rcons = you.conservation(calc_unid);
+    out += _resist_composer("Conserve", cwidth, rcons) + "\n";
+    const int rcorr = you.res_corr(calc_unid);
+    out += _resist_composer("rCorr", cwidth, rcorr) + "\n";
+    const int rrott = you.res_rotting();
+    out += _resist_composer("rRot", cwidth, rrott) + "\n";
+    const int rspir = you.spirit_shield(calc_unid);
+    out += _resist_composer("Spirit", cwidth, rspir) + "\n";
+    const int rward = you.warding(calc_unid);
+    out += _resist_composer("Warding", cwidth, rward) + "\n";
+
     const int notele = you.no_tele(calc_unid);
     const int rrtel = !!player_teleport(calc_unid);
     if (notele && !stasis)
-    {
-        snprintf(buf, sizeof buf, "%sNoTele   %s",
-                 _determine_colour_string(-1, 1), _itosym1(1));
-    }
+        out += _resist_composer("NoTele", cwidth, 1, 1, false) + "\n";
     else if (rrtel && !stasis)
-    {
-        snprintf(buf, sizeof buf, "%sRndTele  %s",
-                 _determine_colour_string(-1, 1), _itosym1(1));
-    }
+        out += _resist_composer("Rnd*Tele", cwidth, 1, 1, false) + "\n";
     else
-    {
-        snprintf(buf, sizeof buf, "%sStasis   %s",
-                 _determine_colour_string(stasis, 1), _itosym1(stasis));
-    }
-    cols.add_formatted(1, buf, false);
+        out += _resist_composer("Stasis", cwidth, stasis) + "\n";
+    cols.add_formatted(1, out, false);
 
     const int no_cast = you.no_cast(calc_unid);
     if (no_cast)
     {
-        snprintf(buf, sizeof buf, "%sNoCast   %s",
-                 _determine_colour_string(-1, 1), _itosym1(1));
-        cols.add_formatted(1, buf, false);
+        out.clear();
+        out += _resist_composer("NoCast", cwidth, 1, 1, false);
+        cols.add_formatted(1, out, false);
     }
 
     _print_overview_screen_equip(cols, equip_chars, sw);
@@ -2382,15 +2412,11 @@ string magic_res_adjective(int mr)
         return "immune";
 
     string prefix =
-            (mr <  10) ? "not" :
-            (mr <  30) ? "slightly" :
-            (mr <  60) ? "somewhat" :
-            (mr <  90) ? "quite" :
+            (mr <  40) ? "not" :
+            (mr <  80) ? "somewhat" :
             (mr < 120) ? "very" :
-            (mr < 150) ? "extremely" :
-            (mr < 190) ? "extraordinarily" :
-            (mr < 240) ? "incredibly" :
-            (mr < 300) ? "uncannily"
+            (mr < 160) ? "extremely" :
+            (mr < 200) ? "incredibly"
                        : "almost entirely";
     return prefix + " resistant";
 }
@@ -2443,7 +2469,7 @@ static string _status_mut_abilities(int sw)
         DUR_DEATH_CHANNEL,
         DUR_PHASE_SHIFT,
         DUR_SILENCE,
-        DUR_INVIS,
+        STATUS_INVISIBLE,
         DUR_CONF,
         DUR_EXHAUSTED,
         DUR_MIGHT,
@@ -2489,12 +2515,15 @@ static string _status_mut_abilities(int sw)
         DUR_RETCHING,
         DUR_WEAK,
         DUR_DIMENSION_ANCHOR,
-        DUR_SPIRIT_HOWL,
         STATUS_DRAINED,
         DUR_TOXIC_RADIANCE,
         DUR_RECITE,
         DUR_GRASPING_ROOTS,
         DUR_FIRE_VULN,
+        DUR_POISON_VULN,
+        DUR_FROZEN,
+        DUR_SAP_MAGIC,
+        STATUS_MAGIC_SAPPED,
     };
 
     status_info inf;

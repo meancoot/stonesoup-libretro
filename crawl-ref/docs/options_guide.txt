@@ -24,8 +24,8 @@ The contents of this text are:
 3-a     Dropping and Picking up.
                 autopickup, autopickup_exceptions, default_autopickup,
                 autopickup_no_burden, pickup_thrown, chunks_autopickup,
-                assign_item_slot, drop_mode, pickup_menu, drop_filter,
-                default_friendly_pickup
+                assign_item_slot, pickup_menu, pickup_menu_limit,
+                drop_filter, default_friendly_pickup
 3-b     Targeting.
                 default_target, target_unshifted_dirs, darken_beyond_range
 3-c     Passive Sightings (detected and remembered entities).
@@ -105,8 +105,9 @@ The contents of this text are:
                 tile_font_tip_size, tile_font_lbl_size,
                 tile_font_ft_light, tile_show_minihealthbar,
                 tile_show_minimagicbar, tile_show_demon_tier,
-                tile_water_anim, tile_layout_priority,
-                tile_realtime_anim, tile_display_mode
+                tile_water_anim, tile_misc_anim, tile_realtime_anim,
+                tile_layout_priority, tile_display_mode,
+                tile_level_map_hide_messages, tile_level_map_hide_sidebar
 4-  Character Dump.
 4-a     Saving.
                 dump_on_save
@@ -118,7 +119,7 @@ The contents of this text are:
                 user_note_prefix, note_items, note_monsters,
                 note_hp_percent, note_skill_levels, note_all_skill_levels,
                 note_skill_max, note_xom_effects, note_messages,
-                note_chat_messages
+                note_chat_messages, note_dgl_messages
 5-  Miscellaneous.
 5-a     All OS.
                 mouse_input, wiz_mode, char_set, colour, cset, feature,
@@ -205,10 +206,10 @@ There are two styles you can use to set options. The classic
 name=value syntax, one option per-line:
     remember_name  = true
     explore_greedy = false
-    drop_mode      = multi
+    confirm_butcher= never
 
 And the NetHack-style combined option line:
-    OPTION = remember_name, !explore_greedy, drop_mode:multi
+    OPTION = remember_name, !explore_greedy, confirm_butcher:never
 
 The second style is useful to specify simple options in a few lines,
 but it cannot be used for options that take complex lists of values
@@ -286,7 +287,10 @@ This is useful if you wish to prevent an included file from altering
 a variable.
 
 See settings/standard_colours.txt and settings/food_colouring.txt
-for usage of aliases and variables.
+for usage of aliases and variables. Note that changing the variables defined
+in these files will only affect your own configuration file, as the default
+options will have already been loaded. If you want to change them, you will
+have to override the options themselves.
 
 
 1-  Starting Screen.
@@ -489,28 +493,19 @@ assign_item_slot = (forward | backward)
         With "backward", items dropped/fired and picked up later are
         more likely to get their old slot back.
 
-drop_mode = (multi | single)
-        Single is the classic behaviour; when you select an inventory
-        letter, that item will be dropped immediately. Multidrop allows
-        you to select multiple items to be dropped. (You can also switch
-        to multidrop from the classic drop menu using the '@' key).
-
-        Multidrop is the default and can be very convenient, but be
-        aware that every item dropped takes one turn. (This is different
-        from picking up.)
-        When selecting multidrops, the top right corner shows the
-        estimated number of turns.
-
-        The order in which items get dropped is from top to bottom in
-        the inventory listing, but equipped items will be dropped last,
-        and may be dropped out of order.
-
 pickup_menu = true
         When true (the default), makes a menu appear, where you can
         choose which items to pick up. Note that no matter how many
         items you choose, picking up will always take one turn.
-        Setting this to false invokes the classical behaviour: when
-        picking up items, you are prompted for them one by one.
+        Setting this to false invokes another behaviour: when picking up
+        items, if there are at least 4 items on your square, the menu will
+        appear, and you are prompted one by one otherwise.
+        This number can be adjusted with the pickup_menu_limit option.
+
+pickup_menu_limit = 4
+        The number of items on your square that will activate menu for pickup
+        when pickup_menu is set to false.  If zero, never use the menu.
+        If negative, use the value of item_stack_summary_minimum instead.
 
 drop_filter += <regex>, <regex>, ...
         (List option)
@@ -1336,7 +1331,7 @@ small_more = false
         small_more = true, it is just the bottom left character if
         clear_messages is not set.
 
-show_inventory_weights = false
+show_inventory_weights = true
         When this is set to true, inventory listings will mention the
         weight of each item.
         Note: This option doesn't currently work for Tiles unless you use
@@ -1892,6 +1887,16 @@ tile_show_demon_tier = true
 
 tile_water_anim = true
         If disabled, animation of liquids will be suppressed.
+        Defaults to false on WebTiles.
+
+tile_misc_anim = true
+        If disabled, animation of miscellaneous things such as altars and
+        torches will be suppressed.
+
+tile_realtime_anim = false
+        If enabled, tile animations will run in real time and will not be tied
+        to player actions.
+        This option is only available on WebTiles.
 
 tile_layout_priority = minimap, inventory, gold_turn, command, spell, monster
         (Ordered list option)
@@ -1907,17 +1912,16 @@ tile_layout_priority = minimap, inventory, gold_turn, command, spell, monster
         between the stat area and the tabs. The memorisation and skill tabs can
         be added to the list too, but are not by default.
 
-tile_realtime_anim = false
-        If enabled, tile animations will run in real time and will not be tied
-        to player actions.
-        This option is only available on WebTiles.
-
 tile_display_mode = (tiles | glyphs | hybrid)
         Controls how the dungeon is rendered. You can use normal tiles (default)
         or make it look like the console version by using glyphs. Hybrid
         overlays icons on top of the glyph view.
         This option is only available on WebTiles.
 
+tile_level_map_hide_messages = true
+tile_level_map_hide_sidebar = false
+        Controls what screen elements are hidden when using the level map.
+        These options are only available on WebTiles.
 
 4-  Character Dump.
 ===================
@@ -2081,8 +2085,13 @@ note_messages += <regex>, <regex>, ...
              note_messages += Your scales start
 
 note_chat_messages = false
-        If set to false, this will disable logging of chat messages
-        from other players. (This setting only applies on the online
+        If set to false, this will disable logging of webtiles chat
+        messages from other players. (This setting only applies on the
+        online servers).
+
+note_dgl_messages = true
+        If set to false, this will disable logging of DGL messages
+        sent by other players. (This setting only applies on the online
         servers).
 
 

@@ -1755,7 +1755,7 @@ Djinn
 
 
 Formicids
-  The Formicids are an species of humanoid ants. Just like their tiny insect
+  The Formicids are a species of humanoid ants. Just like their tiny insect
   ancestors, the Formicids are well adept at earth work, both on the physical
   and magical sides. Their abilities have been used to tunnel immense underground
   communities and structures, many of which are tens of thousands of years old.
@@ -1768,9 +1768,8 @@ Formicids
 
   With the ability to lift ten times their own weight, the Formicids have
   strength rivaling that of ogres. This, along with the fact that they have four
-  arms, allows Formicid warriors to carry both a shield and a two-handed weapon
-  at the same time, though they cannot use a shield along with a weapon meant for
-  and ogre.
+  arms, allows Formicid warriors to equip both a shield and a two-handed weapon
+  at the same time, or to wield a giant club using all four arms.
 
   Formicids make good earth and venom mages, but are quite capable at both melee
   and ranged combat too, albeit a bit flimsy. They are naturally bad at air magic
@@ -1787,6 +1786,32 @@ Gargoyles
   Their natural armour makes them strong melee fighters, and they are naturally
   skilled with blunt weapons and in unarmed combat. They can also be exceptional
   earth-based conjurers.
+
+Vine Stalkers
+  Limber in shape, Vine Stalkers are anthropomorphic masses of thick vines.
+  They possess a once-humanoid core, parasitized moments before death by the
+  magical vines. Lacking any other discernible features, their faces are
+  dominated by their disproportionate, vicious maw with which they disrupt and
+  devour the magical energies of their foes.
+ 
+  Magic courses freely through their bodies, and they can not only share any
+  damage taken with their magical reserves, but in fact physically regenerate
+  at an alarming rate. However these traits come at a price: the dual nature of
+  their bodies makes them frail to the extreme and they cannot benefit from
+  potions or wands to heal their wounds.
+ 
+  Living examples of adaptation, Vine Stalkers level up quickly and lend well
+  to an all-out offensive style; trusting their stealth to choose their prey
+  and then their regenerating capabilities to power through the wounds they may
+  sustain in battle. Many members of the species however, are seen wielding
+  magic quite competently and then switching to a hybrid style when their
+  reserves start to run low, thus replenishing their shroud of magic and their
+  spells' fuel with each voracious bite.
+
+  Their great offensive capabilities and intrinsic regeneration lead some Vine
+  Stalkers to eschew more traditional defenses such as armour and dodging,
+  although this proves fatally unwise often times when their judgement of their
+  prey fails and they bite more than they can possibly chew.
 
 Orcs
 ========================================
@@ -1819,8 +1844,7 @@ Lava Orcs
   They are unique in their ability to swim in lava: even the Djinn, while immune
   to fire, can't swim through a treacle of molten rock. In order to be able to
   use regular equipment, Lava Orcs have invented special fire-proof backpacks;
-  vulnerable items like scrolls or books are not accessible when their owner is
-  too hot.
+  scrolls are not accessible when their owner is too hot.
 
   Many things can fire up their metabolism: facing multiple and/or dangerous
   enemies, being badly hurt, suffering fire damage, berserking, and obviously
@@ -3067,11 +3091,6 @@ Rot
 
 \-MR
   You are more vulnerable to hostile enchantments.
-
-Howl
-  You are being pursued by an insane howling, that against all logic summons
-  wolves out of nowhere to fight you. Eventually the howling should end after
-  a time.
 
 Brainless, Clumsy, Collapse
   One of your attributes (Intelligence, Dexterity, or Strength, respectively)

@@ -75,6 +75,8 @@ djinni_f DJINNI
 djinni_m
 %rim 1
 formicid FORMICID
+vine_stalker_f VINE_STALKER
+vine_stalker_m
 
 # draconians
 draconian_f DRACONIAN DRACONIAN_FIRST
@@ -494,6 +496,7 @@ knife_of_accuracy KNIFE_OF_ACCURACY
 vampires_tooth VAMPIRES_TOOTH
 spriggans_knife SPRIGGANS_KNIFE
 capt_cutlass CAPT_CUTLASS
+arc_blade ARC_BLADE
 ## blunt
 wucad_mu WUCAD_MU
 mace_of_variability MACE_OF_VARIABILITY
@@ -503,6 +506,7 @@ eos EOS
 snakebite SNAKEBITE
 shillelagh SHILLELAGH
 dark_maul DARK_MAUL
+spellbinder SPELLBINDER
 ## polearms
 trident_octopus_king TRIDENT_OCTOPUS_KING
 glaive_of_prune GLAIVE_OF_PRUNE
@@ -989,8 +993,8 @@ wizard WIZARD
 %parts_ctg HELM
 %sdir player/head
 
-## Caps
-cone_blue CONE_BLUE CAP_FIRST_NORM
+## Hats
+cone_blue CONE_BLUE HAT_FIRST_NORM
 straw STRAW
 cap_blue CAP_BLUE
 feather_green FEATHER_GREEN
@@ -999,10 +1003,8 @@ feather_blue FEATHER_BLUE
 feather_yellow FEATHER_YELLOW
 feather_white FEATHER_WHITE
 bandana_ybrown BANDANA_YBROWN
-hat_black HAT_BLACK CAP_LAST_NORM
-
-## Wizard hats
-gandalf WIZARD_GRAY WHAT_FIRST_NORM
+hat_black HAT_BLACK
+gandalf WIZARD_GRAY
 wizard_blue WIZARD_BLUE
 wizard_purple WIZARD_PURPLE
 wizard_bluegreen WIZARD_BLUEGREEN
@@ -1014,7 +1016,7 @@ wizard_red WIZARD_RED
 wizard_white WIZARD_WHITE
 turban_white TURBAN_WHITE
 turban_brown TURBAN_BROWN
-turban_purple TURBAN_PURPLE WHAT_LAST_NORM
+turban_purple TURBAN_PURPLE HAT_LAST_NORM
 
 ## Mutations
 horns1 HORNS1

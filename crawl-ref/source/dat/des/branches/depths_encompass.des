@@ -1,7 +1,5 @@
 ###############################################################################
-# encompass.des: Full level (encompassing) vaults for the main dungeon go here.
-#                For encompass vaults that go in branches (eg branch endings)
-#                use the des file for that branch.
+# depths_encompass.des: Full level (encompassing) vaults for the Depths go here.
 ###############################################################################
 
 # Setups for the below.
@@ -28,7 +26,7 @@
     end
 }}
 
-default-depth: D:12-, Depths:2-, !Depths:$
+default-depth: Depths:2-, !Depths:$
 
 ###############################################################################
 # The River Lethe
@@ -40,107 +38,100 @@ default-depth: D:12-, Depths:2-, !Depths:$
 # Lemuel
 #
 NAME:    lemuel_river_lethe
+TAGS:    no_rotate no_monster_gen no_item_gen uniq_d_encompass
 ORIENT:  encompass
-TAGS:    no_rotate uniq_d_encompass
-DEPTH:   Depths:2-, !Depths:$
-SUBST:   . = .:100 !:1 6:4
-SUBST:   ; = .:200 !:1 1:3
-SUBST:   1 = 1:20 .
-SUBST:   3 = 3:20 .
-KFEAT:   ! = ^
-MONS:    plant
-MONS:    wolf / warg / hell hound
-MONS:    nothing
-MONS:    wight w:50 / wraith / shadow wraith / phantasmal warrior /\
-         skeletal warrior / flayed ghost
-MONS:    dancing weapon
-MONS:    human simulacrum w:60 / elf simulacrum / ogre simulacrum /\
-         centaur simulacrum / troll simulacrum / vampire / wraith / hungry ghost
-MONS:    eye of draining / brain worm / death drake w:5 / shadow /\
-         shadow dragon w:1
-KITEM:   A = potion of experience / any good_item
-KMONS:   A = Maud
-KFEAT:   A = >
-KFEAT:   B = |
-KMONS:   B = neqoxec
-KFEAT:   C = b
-KMONS:   C = lich w:20/shadow fiend
-SUBST:   b = b|
-SUBST:   | = |*
-ITEM:    any scroll, potion of experience
+MONS:    plant / fungus w:2
+MONS:    wolf / warg / hell hound / raiju w:4
+MONS:    shadow w:20 / wraith w:20 / lost soul w:2 / \
+         shadow wraith / phantasmal warrior / skeletal warrior
+MONS:    dancing weapon / war gargoyle w:2
+MONS:    spectral spriggan / spectral centaur / spectral naga /\
+         spectral octopode / spectral draconian / spectral troll /\
+         spectral minotaur w:1 / spriggan simulacrum w:2 / centaur simulacrum w:1 /\
+         naga simulacrum w:2 / troll simulacrum w:2 / minotaur simulacrum w:1 /\
+         draconian simulacrum / vampire / wraith / wight
+MONS:    mana viper / eidolon w:5 / soul eater w:5 / \
+         death drake w:5 / flayed ghost / shadow dragon w:2
+MONS:    ancient lich w:20 / shadow fiend
+KMONS:   8 = Maud, patrolling giant orange brain
+KMONS:   9 = patrolling giant orange brain
+KMONS:   0 = orange crystal statue
+KMONS:   B = giant eyeball
+KMONS:   C = 0 band
+KMONS:   W = patrolling water elemental w:40 / \
+             patrolling hydra simulacrum / patrolling hydra spectre / \
+             patrolling anaconda simulacrum / patrolling anaconda spectre / \
+             patrolling snapping turtle zombie
+ITEM:    any scroll
+KITEM:   e = any / any good_item w:4
+KITEM:   8B = potion of experience ident:type q:1 / any good_item
+KITEM:   9 = |
+KITEM:   0 = potion of restore abilities ident:type
+KFEAT:   8e = >
+KFEAT:   W = w
+NSUBST:  h = 1:+ / *:x, H = 1:+ / *:x
 SHUFFLE: dD/eE/fF/gG
-SUBST:   D=+, d=|, E=x, F=x, G=x
-NSUBST:  e = 1:y / 1:* / *:%
-NSUBST:  f = 1:y / *:%
-NSUBST:  g = 1:y / *:%
-KFEAT:   y = >
-KITEM:   y = any / w:1 any good_item
-SHUFFLE: PQ
-SUBST:   Q = xw
-KMONS:   P = orange crystal statue
-KFEAT:   P = floor
-KMONS:   k = giant eyeball
-KITEM:   k = potion of experience / any good_item
-NSUBST:  r = 1:+ / *:x
-NSUBST:  R = 1:+ / *:x
-: if you.where() == dgn.level_name(dgn.br_entrance("Vaults")) then
-KFEAT:   V = enter_vaults
-: else
-KFEAT:   V = floor
-: end
+SUBST:   D = +, EFG = x
+NSUBST:  e = 1:e / 1:* / *:%, f = 1:e / *:%, g = 1:e / *:%
+SUBST:   | = |*
+SHUFFLE: 0A
+SUBST:   A = xw, 1 = 11.
+# (previously) 762 ;, 372 ., SUBST: . = .:100 ^:1 5:4, ; = .:200 ^:1 1:3
+NSUBST:  . = 12:5 / 2:^ / 4 = 5. / *:., ; = 9:3 / 2:^ / 4 = 3. / *:.
+NSUBST:  . = 13:C / 4 = C. / *:., w = 8:W / 4 = W. / *:w
 MARKER:  O = lua:props_marker { portal=1 }
 MAP
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxccccccccccccxxxxxx
-xxAB.r$xxxwwwxxxxcccccccccccccccccccccccccccxxxxxxxxcc..1....|kcxxxxxx
-xwBB.r$$Rwwwwxxxxc.....+...+...........c***c;;xxxxx;cc.....1.||cxxxxxx
-xw..Or$$Rxwwwxxxxc..C..ccccc...........c***c;;;xxx;;cc.1.1...1.cxxxxxx
-xww..r$$Rxwwwwxxxc.....cxxxc...........c***c;;;;xx;;;+.....1..1cxxxxxx
-xww..xxxRwwww;xxxc..}..cxxxc...........c...c;;;;xx;;cc..1.111..cxxxxxx
-xwww.xxxwww;;;;xxccccccccxxcc+ccc+ccccccc+cc;;;;xx;;cc.11111...cxxxxxx
-xwwwxxxwwww;;;;;xxxxxxxxxxxc...c...c.......c;;;;x;;;cc..111O..1cxxxxxx
-xwwwxxxwwwww;;7;;xxxxxxxxxxc...c...c.w.....c;;;;;;;;cc.111111..cxxxxxx
-xwwwxxxwwwww;;;;;;;xxxxxxxxc...+...c.w.....+;;;;;;;;cc..111..1.cxxxxxx
-xwwwxxxwwww;;7;;;;;;;;xxx;;c...c...c.w.....c;;;;;;;;ccccccccccccxxxxxx
+xx89.h$xxxwwwxxxxcccccccccccccccccccccccccccxxxxxxxxcc..1......cxxxxxx
+xw99.h$$Hwwwwxxxxc%.b..+...+..........%c***c;;xxxxx;cc.....1...cxxxxxx
+xw..Oh$$Hxwwwxxxxc..7..ccccc...........c***c;;;xxx;;cc.1.1...1.cxxxxxx
+xww..h$$Hxwwwwxxxc.....cxxxc...........c***c;;;;xx;;;+.....1..1cxxxxxx
+xww..xxxHwwww;xxxc%.}.%cxxxc...........c...c;;;;xx;;cc..1.111..cxxxxxx
+xwww.xxxwww;;;;xxccccccccxxcc+ccc+ccccccc+cc;;;;xx;;cc.111110..cxxxxxx
+xwwwxxxwwww;;;;;xxxxxxxxxxxc...c...c.......c;;;;x;;;cc..111A..1cxxxxxx
+xwwwxxxwwwww;;6;;xxxxxxxxxxc...c...c.w.....c;;;;;;;;cc.111111||cxxxxxx
+xwwwxxxwwwww;;;;;;;xxxxxxxxc...+...c.w.....+;;;;;;;;cc..1116.|Bcxxxxxx
+xwwwxxxwwww;;6;;;;;;;;xxx;;c...c...c.w.....c;;;;;;;;ccccccccccccxxxxxx
 xwwwxxxwww;;;;;;;;;;;;;;;;;cc+ccc+cc..w....c;;;;;;;;;;xxxxxxxxxxxxxxxx
-xwwwxxxwww;;7;;;;;;;;;;;;;;+.......+..w....cccc;;;;;;xxxxxxxxxxxxxxxxx
+xwwwxxxwww;;;;;;;;;;;;;;;;;+.......+..w....cccc;;;;;;xxxxxxxxxxxxxxxxx
 xwwwwxx;ww;;;;;;;;;;;;;;;;;cccc+cccc...w...c$$c;;;;;;;;xxxxxxxxxxxxxxx
-xwwwwxx;w;;7;;;;cccc;;;;;;;c.......c...w...c$$c;;;;;;;;;;;xxxxxxxxxxwx
+xwwwwxx;w;;6;;;;cccc;;;;;;;c.......c...w...c$$c;;;;;;;;;;;xxxxxxxxxxwx
 xwwwwxx;;;;;;;;cccccc;;;;;;c.......c+ccwwccc+cc;;;;;;;;;;;;;xxxxxxxxwx
-xwwwwxx;;;7;;;cc*4.+;;;;;;;c.......c.c..ww....c;;;;;7;;;;;;;;xxxxxxwwx
-xxwwwwx;;;;;;;;cccccc;;;;;;c6.6.6.6c.c...ww...c;;;;;;;;;;;;;;;xxxxxwwx
+xwwwwxx;;;6;;;cc*3.+;;;;;;;c.......c.c..ww....c;;;;;6;;;;;;;;xxxxxxwwx
+xxwwwwx;;;;;;;;cccccc;;;;;;c5%5%5%5c.+...ww...c;;;;;;;;;;;;;;;xxxxxwwx
 xxxwwwxx;;;;;;;;cccc;;;;;;;ccccccccc.c...ww...c;;;;;;;;;;;;;;;xxxxxwwx
 xxxwwwxx;;;;;;;;;;;;;;;;;;;c$$+....+.c....www.c;;;;;;;ccccccccxxxxxwwx
-xxxwwxx;;cccc;;;;;;;;;;;;;;c$$cccccc.c>....wwwc;;;;;;;c.....$$Dddxxwwx
+xxxwwxx;;cccc;;;;;;;;;;;;;;c$$cccccc.c%....wwwc;;;;;;;c.....$$Dddxxwwx
 xxxwwwx;cccccc;;;;;;xx;;;;;c$$cccccc+cccccccwww;;;;;;;c.....$$xdd+wwwx
-xxxwwwxcc*4.+;;;;;;xxxx;;;;ccccccccc.....c...www;;ccccc.......xxxxxwwx
+xxxwwwxcc*3$+;;;;;;xxxx;;;;ccccccccc.....c...www;;ccccc.......xxxxxwwx
 xxxwwwxxcccccc;;;;xxxxx;;;;;;;cccccc.....+...www;;c...c.......xeexxwwx
-xxxwwwxx;cccc;;;;xxxxxx;;;;;;;cccccc.....c...www;cc.66c.......Eee+wwwx
-xxxwwwxx;;;;;;;;xxx5..c;;;;;;;cccccc.....cccwww;;;+.66+...O...xxxxxwwx
-xxxwwwxx;;;;;;;;;xx5V.c;;;;;;;;;;;;c.....c;wwww;;cc.66c.......Fffxxwwx
-xxxwwwxx;;;;;;;;;;x5..+;;;;;;;;;;;;cccccccwwww;;;;c...c.......xff+wwwx
+xxxwwwxx;cccc;;;;xxxxxx;;;;;;;cccccc.....c...www;cc.55c.......Eee+wwwx
+xxxwwwxx;;;;;;;;xxx4..c;;;;;;;cccccc.....cccwww;;;+.55+...O...xxxxxwwx
+xxxwwwxx;;;;;;;;;xx4O.c;;;;;;;;;;;;c%....c;wwww;;cc.55c.......Fffxxwwx
+xxxwwwxx;;;;;;;;;;x4..+;;;;;;;;;;;;cccccccwwww;;;;c...c.......xff+wwwx
 xxxwwwxx;cccc;;;;xxx..c;;;;;;;;;;;;;;;;;wwwwww;;;;ccccc.......xxxxxwwx
-xxxwwwxxcccccc;;;;;xx.c;;;;;;;;;;;;;;;;wwwwwww;;;;;;;;c.....$$xggxxwwx
-xxxwwwxcc*4.+;;;;;;xxxx;;;;;;;;;;;;;;;wwwwwwwww;;;;;;;c.....$$Ggg+wwwx
+xxxwwwxxcccccc;;;;;xx%c;;;;;;;;;;;;;;;;wwwwwww;;;;;;;;c.....$$xggxxwwx
+xxxwwwxcc*3$+;;;;;;xxxx;;;;;;;;;;;;;;;wwwwwwwww;;;;;;;c.....$$Ggg+wwwx
 xxxwwwxxcccccc;;;;xxxwxx;;;;;;x;;;;;wwwwwwwwwww;;;;;;;ccccccccxxxxxwwx
-xxxwwwxxxcccc;;x;;;xwwxxx;;;;;xx7wwwwwwwwwwwwww;;;;;;;;;;;;;;;xwwwwwwx
-xxxwwwxxxxwww;;;;;;wwwwxw;;;;xxxwwwwwwwwwwwxxwww;;;;7;;;;;wwwwwwwwwwwx
+xxxwwwxxxcccc;;x;;;xwwxxx;;;;;xx6wwwwwwwwwwwwww;;;;;;;;;;;;;;;xwwwwwwx
+xxxwwwxxxxwww;;;;;;wwwwxw;;;;xxxwwwwwwwwwwwxxwww;;;;6;;;;;wwwwwwwwwwwx
 xxxwwwxxxxxwwwwwwwxwwwwwwwwwxxxwwwwwwwwwwwwxxxwwwwww;;wwwwwwwwwwwwwwxx
 xxxxwwwwxxxxwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwxxxxwwwwwwwwwwwwwwwwwwwwwxxx
 xxxxwwwwwwwwwwwwwwwwwwwwwwwwwwwwwxwwwwwwwxxxxxwwwwwwwwwwwwwwwwwwwxxxxx
 xxxxwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwxxxwwwwwwwwwwwwwwwwwwxxxxxxx
-xxxxxwwwwwwwwwwwwwwwwQxwwwwwwwxxwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwxxxxxxxx
-xxxxxxwwwwwwwwwwwwwxxxxwwwwwwwwwwwwwxxxPwwwwwwwwwwxxwwwwwwwwxxxxxxxxxx
+xxxxxwwwwwwwwwwwwwwwwAxwwwwwwwxxwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwxxxxxxxx
+xxxxxxwwwwwwwwwwwwwxxxxwwwwwwwwwwwwwxxx0wwwwwwwwwwxxwwwwwwwwxxxxxxxxxx
 xxxxxxxwwwwwxxxxxxxxxxwwwwwwwxxwwwwxxxxxwwwwwwwwwxxxwwxwwwwxxxxxxxxxxx
-xxxxxxxx;7;;xxx222xxxxxxwwwwxxwww2222xxxxx22wwwwwwxxxxxxxxxxxxxxxxxxxx
+xxxxxxxx;6;;xxx222xxxxxxwwwwxxwww2222xxxxx22wwwwwwxxxxxxxxxxxxxxxxxxxx
 xxxxxxx>;;;xxx;;;;;xx2222wwwwww;;;;;;;;xxxx22;;;;wwwwxxxxxxxxxxxxxxxxx
 xxxxxxxxx;xxxx;;;;;;;;;;;;ww;;;;;;;;;;;;;;;;;;;;;;;;wwwxxxxxxxxxxxxxxx
 xxxxxxxxxxxx;;;;2;;;;;;;;;;;;;;;;;);;;;;;2;;;;;;;;;;wwwxxxxxxxxxxxxxxx
 xxxxxxxxxxxx;;;;;;;;;;;;;;;;;;;;;[](;;;;;;;;;;;;;;;;2wxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx{xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ENDMAP
 
@@ -156,7 +147,6 @@ ENDMAP
 NAME:    minmay_sea_of_fire
 TAGS:    no_rotate uniq_d_encompass
 ORIENT:  encompass
-DEPTH:   Depths:2-, !Depths:$
 MONS:    hell hound / nothing
 MONS:    lindwurm
 MONS:    fire drake / steam dragon w:1
@@ -258,7 +248,6 @@ ENDMAP
 # The New Box Level (dp)
 #
 NAME:    box_level_dp
-DEPTH:   Depths:2-, !Depths:$
 ORIENT:  encompass
 TAGS:    no_pool_fixup no_rotate uniq_d_encompass
 NSUBST:  A = 1:+ / *:b
@@ -276,11 +265,11 @@ ITEM:    scroll of teleportation
 ITEM:    amulet of stasis
 NSUBST:  T = 1:. / *:T
 KFEAT:   T = known teleport trap
-KMONS:   w = water elemental / elemental wellspring w:1 / \
+KMONS:   w = water elemental / \
              merfolk javelineer w:2 / merfolk impaler w:2 / \
              octopode w:3 / nothing w:300
 KFEAT:   w = w
-KMONS:   l = fire vortex / lava snake / lava fish / fire elemental w:1 /\
+KMONS:   l = fire vortex / lava snake / lava worm / fire elemental w:1 /\
              nothing w:50
 KFEAT:   l = l
 KMONS:   z = killer bee
@@ -372,7 +361,6 @@ ENDMAP
 # A mockup of the Forest branch (1KB)
 #
 NAME:    spriggan_forest
-DEPTH:   Depths:2-, !Depths:$
 ORIENT:  encompass
 TAGS:    no_pool_fixup uniq_d_encompass
 MONS:    spriggan, spriggan rider, spriggan druid, spriggan berserker
@@ -385,7 +373,7 @@ KMONS:   Q = bush
 KMONS:   e = bat skeleton
 KMONS:   K = giant firefly
 KITEM:   f = dagger / short sword / cutlass / flail / whip / blowgun / bow
-KITEM:   g = robe / cloak / cap / buckler / steam dragon armour w:1
+KITEM:   g = robe / cloak / hat / buckler / steam dragon armour w:1
 KMONS:   L = spriggan ; robe . dagger
 KITEM:   h = bread ration q:2
 KMONS:   M = yak
@@ -478,7 +466,6 @@ ENDMAP
 NAME:    hangedman_slaughterboxes
 TAGS:    no_pool_fixup no_monster_gen no_item_gen patrolling uniq_d_encompass
 ORIENT:  encompass
-DEPTH:   Depths:2-, !Depths:$
 MONS:    butterfly, plant
 KMONS:   S = 0 band
 KMONS:   # = 9 band
@@ -824,7 +811,7 @@ TAGS: grunt_profane_temple no_monster_gen
 NSUBST: 5 = 1:6 / *:5
 KMONS: 4 = iron devil
 KMONS: 5 = skeletal warrior
-KMONS: 6 = iron dragon / iron troll / iron troll
+KMONS: 6 = iron dragon / iron troll / war gargoyle
 KFEAT: A = stone_arch
 MARKER: A = lua:props_marker { portal=1 }
 COLOUR: G = cyan
@@ -908,6 +895,8 @@ ccJ.1.Jcc
  cc...cc
   cc+cc
 ENDMAP
+
+default-depth: Depths:2-, !Depths:$
 ###############################################################################
 #  This vault excercises varied old ideas for the Vaults branch:
 #  a primarily humanoid-based monster set, a focus on placing groups,
@@ -917,7 +906,6 @@ ENDMAP
 #
 NAME:    hangedman_spin_cycle
 TAGS:    no_monster_gen no_item_gen no_trap_gen patrolling uniq_d_encompass
-DEPTH:   Depths:2-, !Depths:$
 ORIENT:  encompass
 KMONS:   - = plant
 KMONS:   _ = plant col:random name:demonic name_adjective tile:mons_demonic_plant
@@ -1074,7 +1062,6 @@ ENDMAP
 #
 NAME:    hangedman_crystal_crosses_colossus
 TAGS:    no_monster_gen no_item_gen no_pool_fixup uniq_d_encompass
-DEPTH:   Depths:2-, !Depths:$
 ORIENT:  encompass
 MONS:    deep elf conjurer / deep elf knight w:7 / wizard / ogre mage / \
          centaur warrior w:8 ; bow ego:flame | bow ego:frost . arrow / \
@@ -1098,7 +1085,7 @@ MONS:    frost giant w:5 / fire giant w:5 / naga mage / hell knight / \
          glaive w:2 ego:flaming | glaive w:2 ego:freezing
 MONS:    lorocyproca w:5 / fire dragon perm_ench:shapeshifter w:12 / fire dragon w:3 / \
          ice dragon perm_ench:shapeshifter w:12 / ice dragon w:3 / \
-         metal gargoyle w:5 / glowing shapeshifter / ghost moth w:1 / \
+         war gargoyle w:5 / glowing shapeshifter / ghost moth w:1 / \
          boulder beetle / anaconda simulacrum w:4 / harpy simulacrum w:4 / \
          hydra simulacrum w:4 / fire dragon simulacrum w:3 / fire crab w:5 / \
          dancing weapon w:15 ; glaive ego:flaming | glaive ego:freezing | \
@@ -1606,7 +1593,7 @@ MONS:    giant orange brain / eye of devastation / golden eye w:5 / \
 MONS:    giant eyeball w:45 / bone dragon w:15 / tentacled monstrosity w:15 / \
          glowing shapeshifter hd:11 w:30 / glowing shapeshifter hd:12 w:15 / \
          azure jelly / thorn hunter w:5 / flayed ghost / \
-         dancing weapon w:5 ; glaive good_item
+         dancing weapon w:5 ; glaive good_item / war gargoyle
 MONS:    centaur warrior / yaktaur w:5 / orc knight / \
          deep elf priest w:5 / deep troll / boggart w:5 / \
          rakshasa w:3 / wizard / necromancer / spriggan rider w:5 / \

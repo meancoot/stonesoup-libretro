@@ -336,6 +336,7 @@ bool did_god_conduct(conduct_type thing_done, int level, bool known,
             case GOD_TROG:
             case GOD_BEOGH:
             case GOD_LUGONU:
+            case GOD_DITHMENOS:
                 if (god_hates_attacking_friend(you.religion, victim))
                     break;
 
@@ -363,6 +364,7 @@ bool did_god_conduct(conduct_type thing_done, int level, bool known,
             case GOD_MAKHLEB:
             case GOD_BEOGH:
             case GOD_LUGONU:
+            case GOD_DITHMENOS:
                 if (god_hates_attacking_friend(you.religion, victim))
                     break;
 
@@ -391,6 +393,7 @@ bool did_god_conduct(conduct_type thing_done, int level, bool known,
             case GOD_KIKUBAAQUDGHA:
             case GOD_BEOGH:
             case GOD_LUGONU:
+            case GOD_DITHMENOS:
                 if (god_hates_attacking_friend(you.religion, victim))
                     break;
 
@@ -521,6 +524,7 @@ bool did_god_conduct(conduct_type thing_done, int level, bool known,
             case GOD_MAKHLEB:
             case GOD_BEOGH:
             case GOD_LUGONU:
+            case GOD_DITHMENOS:
                 if (god_hates_attacking_friend(you.religion, victim))
                     break;
 
@@ -827,8 +831,8 @@ bool did_god_conduct(conduct_type thing_done, int level, bool known,
             }
             break;
 
-        case DID_CAUSE_GLOWING:
         case DID_DELIBERATE_MUTATING:
+        case DID_CAUSE_GLOWING:
             if (you_worship(GOD_ZIN))
             {
                 if (!known && thing_done != DID_CAUSE_GLOWING)
@@ -976,27 +980,92 @@ bool did_god_conduct(conduct_type thing_done, int level, bool known,
             }
             break;
 
+        case DID_ILLUMINATE:
+            if (you_worship(GOD_DITHMENOS))
+            {
+                if (!known)
+                {
+                    simple_god_message(" forgives your accidental act of "
+                                       "illumination, just this once.");
+                    break;
+                }
+                simple_god_message(" does not appreciate your illumination!");
+                piety_change = -level;
+                if (level > 5)
+                    penance = level - 5;
+                retval = true;
+            }
+            break;
+
+        case DID_KILL_ILLUMINATING:
+            if (you_worship(GOD_DITHMENOS)
+                && !god_hates_attacking_friend(you.religion, victim))
+            {
+                simple_god_message(" appreciates your extinguishing a source "
+                                   "of illumination.");
+                retval = true;
+                piety_denom = level + 10;
+                piety_change = piety_denom - 6;
+            }
+            break;
+
+        case DID_FIRE:
+            if (you_worship(GOD_DITHMENOS))
+            {
+                if (!known)
+                {
+                    simple_god_message(" forgives your accidental "
+                                       "fire-starting, just this once.");
+                    break;
+                }
+                simple_god_message(" does not appreciate your starting fires!");
+                piety_change = -level;
+                if (level > 5)
+                    penance = level - 5;
+                retval = true;
+            }
+            break;
+
+        case DID_KILL_FIERY:
+            if (you_worship(GOD_DITHMENOS)
+                && !god_hates_attacking_friend(you.religion, victim))
+            {
+                simple_god_message(" appreciates your extinguishing a source "
+                                   "of fire.");
+                retval = true;
+                piety_denom = level + 10;
+                piety_change = piety_denom - 6;
+            }
+            break;
+
         case DID_NOTHING:
         case NUM_CONDUCTS:
             break;
         }
 
-        if (you_worship(GOD_OKAWARU)
-            // currently no constructs and plants
-            && (thing_done == DID_KILL_LIVING
-                || thing_done == DID_KILL_UNDEAD
-                || thing_done == DID_KILL_DEMON
-                || thing_done == DID_KILL_HOLY)
+        // currently no constructs and plants
+        if ((thing_done == DID_KILL_LIVING
+             || thing_done == DID_KILL_UNDEAD
+             || thing_done == DID_KILL_DEMON
+             || thing_done == DID_KILL_HOLY)
             && !god_hates_attacking_friend(you.religion, victim))
         {
-            piety_change = get_fuzzied_monster_difficulty(victim);
-            dprf("fuzzied monster difficulty: %4.2f", piety_change * 0.01);
-            piety_denom = 700;
-            if (piety_change > 3200)
-                simple_god_message(" appreciates your kill.");
-            else if (piety_change > 9) // might still be miniscule
-                simple_god_message(" accepts your kill.");
-            retval = true;
+            if (you_worship(GOD_OKAWARU))
+            {
+                piety_change = get_fuzzied_monster_difficulty(victim);
+                dprf("fuzzied monster difficulty: %4.2f", piety_change * 0.01);
+                piety_denom = 700;
+                if (piety_change > 3200)
+                    simple_god_message(" appreciates your kill.");
+                else if (piety_change > 9) // might still be miniscule
+                    simple_god_message(" accepts your kill.");
+                retval = true;
+            }
+            if (you_worship(GOD_DITHMENOS))
+            {
+                piety_change *= 2;
+                piety_denom *= 3;
+            }
         }
 
 #ifdef DEBUG_DIAGNOSTICS
@@ -1037,6 +1106,7 @@ bool did_god_conduct(conduct_type thing_done, int level, bool known,
                 "Kill Artificial", "Undead Slave Kill Artificial",
                 "Servant Kill Artificial", "Destroy Spellbook",
                 "Exploration", "Desecrate Holy Remains", "Seen Monster",
+                "Illuminate", "Kill Illuminating", "Fire", "Kill Fiery",
             };
 
             COMPILE_CHECK(ARRAYSZ(conducts) == NUM_CONDUCTS);

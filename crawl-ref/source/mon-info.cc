@@ -186,6 +186,22 @@ static monster_info_flags ench_to_mb(const monster& mons, enchant_type ench)
         return MB_TORNADO;
     case ENCH_TORNADO_COOLDOWN:
         return MB_TORNADO_COOLDOWN;
+    case ENCH_BARBS:
+        return MB_BARBS;
+    case ENCH_POISON_VULN:
+        return MB_POISON_VULN;
+    case ENCH_ICEMAIL:
+        return MB_ICEMAIL;
+    case ENCH_AGILE:
+        return MB_AGILE;
+    case ENCH_FROZEN:
+        return MB_FROZEN;
+    case ENCH_BLACK_MARK:
+        return MB_BLACK_MARK;
+    case ENCH_SAP_MAGIC:
+        return MB_SAP_MAGIC;
+    case ENCH_SHROUD:
+        return MB_SHROUD;
     default:
         return NUM_MB_FLAGS;
     }
@@ -329,7 +345,9 @@ monster_info::monster_info(monster_type p_type, monster_type p_base_type)
     type = p_type;
     base_type = p_base_type;
 
-    draco_type = mons_genus(type) == MONS_DRACONIAN ? MONS_DRACONIAN : type;
+    draco_type = mons_genus(type) == MONS_DRACONIAN  ? MONS_DRACONIAN :
+                 mons_genus(type) == MONS_DEMONSPAWN ? MONS_DEMONSPAWN
+                                                     : type;
 
     number = 0;
     colour = mons_class_colour(type);
@@ -343,6 +361,7 @@ monster_info::monster_info(monster_type p_type, monster_type p_base_type)
     mitemuse = mons_class_itemuse(type);
 
     mbase_speed = mons_class_base_speed(type);
+    menergy = mons_class_energy(type);
 
     fly = max(mons_class_flies(type), mons_class_flies(base_type));
 
@@ -441,7 +460,10 @@ monster_info::monster_info(const monster* m, int milev)
     }
 
     draco_type =
-        mons_genus(type) == MONS_DRACONIAN ? ::draco_subspecies(m) : type;
+        (mons_genus(type) == MONS_DRACONIAN
+        || mons_genus(type) == MONS_DEMONSPAWN)
+            ? ::draco_or_demonspawn_subspecies(m)
+            : type;
 
     if (!mons_can_display_wounds(m)
         || !mons_class_can_display_wounds(type))
@@ -491,7 +513,7 @@ monster_info::monster_info(const monster* m, int milev)
     {
         if (type == MONS_LERNAEAN_HYDRA
             || type == MONS_ROYAL_JELLY
-            || type == MONS_SERPENT_OF_HELL)
+            || mons_species(type) == MONS_SERPENT_OF_HELL)
         {
             mb.set(MB_NAME_THE);
         }
@@ -564,6 +586,7 @@ monster_info::monster_info(const monster* m, int milev)
     mresists = get_mons_resists(m);
     mitemuse = mons_itemuse(m);
     mbase_speed = mons_base_speed(m);
+    menergy = mons_class_energy(m->type);
     fly = mons_flies(m);
 
     if (mons_wields_two_weapons(m))
@@ -826,7 +849,7 @@ string monster_info::_core_name() const
         s = "Lernaean hydra"; // TODO: put this into mon-data.h
     else if (nametype == MONS_ROYAL_JELLY)
         s = "royal jelly";
-    else if (nametype == MONS_SERPENT_OF_HELL)
+    else if (mons_species(nametype) == MONS_SERPENT_OF_HELL)
         s = "Serpent of Hell";
     else if (mons_is_mimic(nametype))
         s = mimic_name();
@@ -858,6 +881,15 @@ string monster_info::_core_name() const
         case MONS_DRACONIAN_SCORCHER:
             if (base_type != MONS_NO_MONSTER)
                 s = draconian_colour_name(base_type) + " " + s;
+            break;
+
+        case MONS_BLOOD_SAINT:
+        case MONS_CHAOS_CHAMPION:
+        case MONS_WARMONGER:
+        case MONS_CORRUPTER:
+        case MONS_BLACK_SUN:
+            if (base_type != MONS_NO_MONSTER)
+                s = demonspawn_base_name(base_type) + " " + s;
             break;
 
         case MONS_DANCING_WEAPON:
@@ -1139,6 +1171,15 @@ bool monster_info::less_than(const monster_info& m1, const monster_info& m2,
         return false;
     }
 
+    // Treat base demonspawn identically, as with draconians.
+    if (!zombified && m1.type >= MONS_FIRST_BASE_DEMONSPAWN
+        && m1.type <= MONS_LAST_BASE_DEMONSPAWN
+        && m2.type >= MONS_FIRST_BASE_DEMONSPAWN
+        && m2.type <= MONS_LAST_BASE_DEMONSPAWN)
+    {
+        return false;
+    }
+
     int diff_delta = mons_avg_hp(m1.type) - mons_avg_hp(m2.type);
 
     // By descending difficulty
@@ -1165,7 +1206,7 @@ bool monster_info::less_than(const monster_info& m1, const monster_info& m2,
         return m1.number > m2.number;
 
     if (m1.type == MONS_BALLISTOMYCETE)
-        return (m1.number > 0) > (m2.number > 0);
+        return m1.number > 0 > (m2.number > 0);
 
     // Shifters after real monsters of the same type.
     if (m1.is(MB_SHAPESHIFTER) != m2.is(MB_SHAPESHIFTER))
@@ -1302,6 +1343,8 @@ string monster_info::pluralised_name(bool fullname) const
         return "mimics";
     else if (mons_genus(type) == MONS_DRACONIAN)
         return pluralise(mons_type_name(MONS_DRACONIAN, DESC_PLAIN));
+    else if (mons_genus(type) == MONS_DEMONSPAWN)
+        return pluralise(mons_type_name(MONS_DEMONSPAWN, DESC_PLAIN));
     else if (type == MONS_UGLY_THING || type == MONS_VERY_UGLY_THING
              || type == MONS_DANCING_WEAPON || !fullname)
     {
@@ -1544,6 +1587,22 @@ vector<string> monster_info::attributes() const
         v.push_back("surrounded by raging winds");
     if (is(MB_TORNADO_COOLDOWN))
         v.push_back("surrounded by restless winds");
+    if (is(MB_BARBS))
+        v.push_back("skewered by manticore barbs");
+    if (is(MB_POISON_VULN))
+        v.push_back("more vulnerable to poison");
+    if (is(MB_ICEMAIL))
+        v.push_back("surrounded by an icy envelope");
+    if (is(MB_AGILE))
+        v.push_back("unusually agile");
+    if (is(MB_FROZEN))
+        v.push_back("encased in ice");
+    if (is(MB_BLACK_MARK))
+        v.push_back("absorbing vital energies");
+    if (is(MB_SAP_MAGIC))
+        v.push_back("magic-sapped");
+    if (is(MB_SHROUD))
+        v.push_back("shrouded");
     return v;
 }
 
@@ -1653,8 +1712,8 @@ int monster_info::res_magic() const
 
     item_def *jewellery = inv[MSLOT_JEWELLERY].get();
 
-    if (jewellery && (jewellery->base_type == OBJ_JEWELLERY)
-        && (jewellery->sub_type == RING_PROTECTION_FROM_MAGIC))
+    if (jewellery && jewellery->base_type == OBJ_JEWELLERY
+        && jewellery->sub_type == RING_PROTECTION_FROM_MAGIC)
     {
         mr += 40;
     }
@@ -1734,26 +1793,12 @@ bool monster_info::cannot_move() const
 
 bool monster_info::airborne() const
 {
-    return (fly == FL_LEVITATE) || (fly == FL_WINGED && !cannot_move());
+    return fly == FL_LEVITATE || (fly == FL_WINGED && !cannot_move());
 }
 
 bool monster_info::ground_level() const
 {
     return !airborne() && !is(MB_CLINGING);
-}
-
-vector<mon_spellbook_type> monster_info::get_spellbooks() const
-{
-    vector<mon_spellbook_type> books;
-
-    // special case for vault monsters: if they have a custom book,
-    // treat it as MST_GHOST
-    if (this->props.exists("custom_spells"))
-        books.push_back(MST_GHOST);
-    else
-        books = mons_spellbook_list(this->type);
-
-    return books;
 }
 
 void get_monster_info(vector<monster_info>& mons)

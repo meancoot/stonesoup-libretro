@@ -41,9 +41,11 @@ bool lost_soul_revive(monster* mons);
 bool lost_soul_spectralize(monster* mons);
 
 int spawn_spirit_pack(const actor* target);
-void waterport_touch(monster* nymph, actor* target);
-void treant_release_wasps(monster* mons);
+void treant_release_fauna(monster* mons);
 bool apply_grasping_roots(monster* mons);
 void check_grasping_roots(actor* act, bool quiet = false);
+
+void siren_song(monster* mons);
+void shock_serpent_discharge(monster* serpent);
 
 #endif

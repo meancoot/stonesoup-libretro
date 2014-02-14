@@ -388,13 +388,12 @@ tileidx_t tilep_equ_helm(const item_def &item)
 
     switch (item.sub_type)
     {
+#if TAG_MAJOR_VERSION == 34
         case ARM_CAP:
-            return _modrng(item.rnd, TILEP_HELM_CAP_FIRST_NORM,
-                           TILEP_HELM_CAP_LAST_NORM);
-
-        case ARM_WIZARD_HAT:
-            return _modrng(item.rnd, TILEP_HELM_WHAT_FIRST_NORM,
-                           TILEP_HELM_WHAT_LAST_NORM);
+#endif
+        case ARM_HAT:
+            return _modrng(item.rnd, TILEP_HELM_HAT_FIRST_NORM,
+                           TILEP_HELM_HAT_LAST_NORM);
 
         case ARM_HELMET:
             return _modrng(item.rnd, TILEP_HELM_FIRST_NORM,
@@ -472,7 +471,8 @@ tileidx_t tileidx_player()
         case TRAN_ICE_BEAST: ch = TILEP_TRAN_ICE_BEAST; break;
         case TRAN_WISP:      ch = TILEP_MONS_INSUBSTANTIAL_WISP; break;
         case TRAN_JELLY:     ch = TILEP_MONS_JELLY;     break;
-        case TRAN_FUNGUS:    ch = TILEP_MONS_WANDERING_MUSHROOM; break;
+        case TRAN_FUNGUS:    ch = TILEP_TRAN_MUSHROOM;  break;
+        case TRAN_SHADOW:    ch = TILEP_TRAN_SHADOW;    break;
         case TRAN_DRAGON:
         {
             switch (you.species)
@@ -630,6 +630,8 @@ tileidx_t tilep_species_to_base_tile(int sp, int level)
         return TILEP_BASE_DJINNI;
     case SP_FORMICID:
         return TILEP_BASE_FORMICID;
+    case SP_VINE_STALKER:
+        return TILEP_BASE_VINE_STALKER;
     default:
         return TILEP_BASE_HUMAN;
     }

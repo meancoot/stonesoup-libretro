@@ -333,6 +333,7 @@ void Stash::update()
         hints_first_item(*pitem);
 
         god_id_item(*pitem);
+        maybe_identify_base_type(*pitem);
         const item_def& item = *pitem;
 
         if (!_grid_has_perceived_multiple_items(p))
@@ -661,7 +662,10 @@ void Stash::_update_corpses(int rot_time)
 void Stash::_update_identification()
 {
     for (int i = items.size() - 1; i >= 0; i--)
+    {
         god_id_item(items[i]);
+        maybe_identify_base_type(items[i]);
+    }
 }
 
 void Stash::add_item(const item_def &item, bool add_to_front)
@@ -1805,8 +1809,8 @@ void StashTracker::search_stashes()
     }
 
     bool sort_by_dist = true;
-    bool show_as_stacks = true;
-    bool filter_useless = false;
+    bool show_as_stacks = false;
+    bool filter_useless = true;
     bool default_execute = true;
     while (true)
     {
@@ -1883,7 +1887,7 @@ void StashSearchMenu::draw_title()
     {
         cgotoxy(1, 1);
         formatted_string fs = formatted_string(title->colour);
-        fs.cprintf("%d %s%s,",
+        fs.cprintf("%d %s%s",
                    title->quantity, title->text.c_str(),
                    title->quantity > 1 ? "es" : "");
         fs.display();
@@ -1893,13 +1897,13 @@ void StashSearchMenu::draw_title()
 #endif
 
         draw_title_suffix(formatted_string::parse_string(make_stringf(
-                 "<lightgrey> [<w>a-z</w>: %s"
-                 " <w>?</w>/<w>!</w>: %s"
-                 "  <w>-</w>:show %s"
-                 " <w>/</w>:sort %s"
-                 " <w>=</w>:%s]",
-                 menu_action == ACT_EXECUTE ? "travel" : "view",
-                 menu_action == ACT_EXECUTE ? "view" : "travel",
+                 "<lightgrey>"
+                 ": <w>%s</w> [toggle: <w>!</w>],"
+                 " <w>%s</w> stacks [<w>-</w>],"
+                 " by <w>%s</w> [<w>/</w>],"
+                 " <w>%s</w> useless [<w>=</w>]"
+                 "</lightgrey>",
+                 menu_action == ACT_EXECUTE ? " view " : "travel",
                  stack_style, sort_style, filtered)), false);
     }
 }
@@ -2080,9 +2084,9 @@ bool StashTracker::display_search_results(
     else
         sort(results->begin(), results->end(), compare_by_name());
 
-    StashSearchMenu stashmenu(show_as_stacks ? "stacks" : "items ",
-                              sort_by_dist ? "by dist" : "by name",
-                              filter_useless ? "filtered" : "unfiltered");
+    StashSearchMenu stashmenu(show_as_stacks ? "hide" : "show",
+                              sort_by_dist ? "dist" : "name",
+                              filter_useless ? "hide" : "show");
     stashmenu.set_tag("stash");
     stashmenu.can_travel   = can_travel_interlevel();
     stashmenu.action_cycle = Menu::CYCLE_TOGGLE;

@@ -121,8 +121,7 @@ const uint64_t M_FAKE_SPELLS       = (uint64_t)1<<35;
 // always leaves a corpse
 const uint64_t M_ALWAYS_CORPSE     = (uint64_t)1<<36;
 
-// is constantly "fleeing"
-const uint64_t M_FLEEING           = (uint64_t)1<<37;
+// 1<<37
 
 // is an artificial being
 const uint64_t M_ARTIFICIAL        = (uint64_t)1<<38;
@@ -161,6 +160,12 @@ const uint64_t M_HYBRID            = (uint64_t)1<<49;
 
 // monster is always alerted to hostiles, and does not forget them over time
 const uint64_t M_VIGILANT          = (uint64_t)1<<50;
+
+// monster starts with Ozocubu's Armour
+const uint64_t M_OZOCUBUS_ARMOUR   = (uint64_t)1<<51;
+
+// monster starts with a Shroud of Golubria
+const uint64_t M_SHROUD            = (uint64_t)1<<52;
 
 // Same for flags for actual monsters.
 typedef uint64_t monster_flag_type;
@@ -236,4 +241,5 @@ const uint64_t MF_SEEN_RANGED        = BIT(35); // known to have a ranged attack
 
 const uint64_t MF_POLYMORPHED        = BIT(36); // this monster has been polymorphed.
 const uint64_t MF_JUST_SLEPT         = BIT(37); // just got hibernated/slept
+const uint64_t MF_TSO_SEEN           = BIT(38); // possibly got piety with TSO
 #endif

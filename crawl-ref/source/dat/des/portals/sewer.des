@@ -768,7 +768,7 @@ ITEM:     potion of flight w:50 / potion of invisibility / \
           potion of might w:3 / potion of agility w:4 / \
           potion of brilliance w:3 / nothing
 #       possibly rather generous loot, if you get to the center
-ITEM:     scroll of vulnerability / scroll of identify / wizard hat / \
+ITEM:     scroll of vulnerability / scroll of identify / hat / \
           potion of magic / potion of brilliance / potion of resistance
 ITEM:     scroll of identify / scroll of recharging / potion of invisibility / \
           pair of gloves w:5 / pair of boots w:5 / potion of agility / nothing
@@ -779,7 +779,7 @@ KITEM:    ' = scroll of random uselessness w:30 / \
               scroll of identify / scroll of teleportation / \
               potion of confusion w:50 / potion of paralysis w:50 / \
               potion of mutation / potion of flight / \
-              wizard hat / buckler / pair of gloves w:5 / pair of boots w:5
+              hat / buckler / pair of gloves w:5 / pair of boots w:5
 MAP
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 xwwwwwwwwwwwWWW-WW-W--WWWWW-WWW--W--WW-WW-WW-W-WWwwwwwwwwwwwx
@@ -1317,4 +1317,44 @@ x##~3&&&&&&&&&&&&&&&&&&&&&&&3~##x
 x###~~~~~~~~~~~~{~~~~~~~~~~~~###x
 x###############################x
 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ENDMAP
+
+NAME:   sewer_ratzerg_badplayer
+TAGS:   no_item_gen no_monster_gen no_pool_fixup
+ORIENT: encompass
+KFEAT: bcd = . w:1 / W w:9
+: local rnd = crawl.random2(3)
+: if rnd == 0 then
+KMONS: bcd = rat w:40 / grey rat w:1 / nothing w:59
+: elseif rnd == 1 then
+KMONS: bcd = ball python w:40 / adder w:1 / nothing w:59
+: else
+KMONS: bcd = giant newt w:40 / giant gecko w:1 / nothing w:59
+: end
+KITEM: $ = potion of might / potion of berserk rage /\
+           potion of agility / potion of magic /\
+           potion of brilliance / potion of speed w:5
+COLOUR: bcd = lightgreen
+SUBST: ^ = .:10 W:2, ! = .:5 W:5
+NSUBST: cbd = 5:$
+: sewer_setup(_G)
+MAP
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xddddd!xxxx^^^^^^^xxxx!bbbbbx
+xddddd!!!^^^.....^^^!!!bbbbbx
+xddddd!!!^^^..A<.^^^!!!bbbbbx
+xddddd!!!^^^.....^^^!!!bbbbbx
+xddddd!xxxx^^^^^^^xxxx!bbbbbx
+xxxxxxxxxxxxx^^^xxxxxxxxxxxxx
+xxxxxxxxxxxxx^^^xxxxxxxxxxxxx
+xxxxxxxxxxxxx^^^xxxxxxxxxxxxx
+xxxxxxxxxxxxx!!!xxxxxxxxxxxxx
+xxxxxxxxxxxxx!!!xxxxxxxxxxxxx
+xxxxxxxxxxxx!!!!!xxxxxxxxxxxx
+xxxxxxxxxxxxcccccxxxxxxxxxxxx
+xxxxxxxxxxxxcccccxxxxxxxxxxxx
+xxxxxxxxxxxxcccccxxxxxxxxxxxx
+xxxxxxxxxxxxcccccxxxxxxxxxxxx
+xxxxxxxxxxxxcccccxxxxxxxxxxxx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ENDMAP

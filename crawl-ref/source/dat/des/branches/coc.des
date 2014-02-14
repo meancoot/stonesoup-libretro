@@ -237,7 +237,7 @@ xxxxww..ww....cc......www.3wwwwwwwwwwwww..........ccccccccccc..wwwxxxx
 xxxxw...ww..cccccc.....www.wwwwwwwwww'3..........cc....9.2..cc..wwxxxx
 xxxxw..ww..ccccccc+c....ww.'wwwwwwwwwww''........ccf********cc..wwxxxx
 xxxxw..ww..cc.%%%%.cc...ww..wwwwwwwwwwwwwwwww'....ccccccc+ccc...'wxxxx
-xxxxw..ww..cc2.e0.2cc...ww..wwwwwwwwwwwwwwwwwwww'......c...c.....wxxxx
+xxxxw..ww..cc2.e4.2cc...ww..wwwwwwwwwwwwwwwwwwww'......c...c.....wxxxx
 xxxxw..ww..cc.%%%%.cc..www.'wwwwwwwwwwwwwwwwwwwwwwwww'.cc+cc..I..wxxxx
 xxxxw..www..c+cccccc...ww..wwwwwwwwwwwwwwwwwwwwwwwwwww..........wwxxxx
 xxxxww..ww....ccccH...www.wwwwwwwwwwwwwwwwwwwwwwwwwwwww........wwwxxxx
@@ -564,8 +564,7 @@ MONS:    ice devil w:12 / blue devil / bog body
 MONS:    anaconda simulacrum / titan simulacrum / \
          hydra simulacrum / storm dragon simulacrum
 KMONS:   6 = ice statue
-KMONS:   7 = patrolling kraken simulacrum w:15 / \
-             patrolling elemental wellspring band
+KMONS:   7 = patrolling kraken simulacrum w:15
 KMONS:   89 = ice dragon / frost giant w:4
 KMONS:   & = patrolling ice fiend
 : serpent_of_hell_setup(_G)

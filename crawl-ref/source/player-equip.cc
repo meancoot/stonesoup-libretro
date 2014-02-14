@@ -455,6 +455,10 @@ static void _equip_use_warning(const item_def& item)
         mpr("You really shouldn't be using a hasty item like this.");
     else if (is_poisoned_item(item) && you_worship(GOD_SHINING_ONE))
         mpr("You really shouldn't be using a poisoned item like this.");
+    else if (is_illuminating_item(item) && you_worship(GOD_DITHMENOS))
+        mpr("You really shouldn't be using an illuminating item like this.");
+    else if (is_fiery_item(item) && you_worship(GOD_DITHMENOS))
+        mpr("You really shouldn't be using a fiery item like this.");
 }
 
 static void _wield_cursed(item_def& item, bool known_cursed, bool unmeld)
@@ -980,7 +984,7 @@ static void _equip_armour_effect(item_def& arm, bool unmeld)
             if (!unmeld && you.spirit_shield() < 2)
             {
                 dec_mp(you.magic_points);
-                if (you.species == SP_DJINNI)
+                if (you.species == SP_DJINNI || you.species == SP_VINE_STALKER)
                     mpr("You feel the presence of a powerless spirit.");
                 else
                     mpr("You feel your power drawn to a protective spirit.");
@@ -1378,7 +1382,7 @@ static void _equip_jewellery_effect(item_def &item, bool unmeld)
         if (you.spirit_shield() < 2 && !unmeld)
         {
             dec_mp(you.magic_points);
-            if (you.species == SP_DJINNI)
+            if (you.species == SP_DJINNI || you.species == SP_VINE_STALKER)
                 mpr("You feel the presence of a powerless spirit.");
             else
                 mpr("You feel your power drawn to a protective spirit.");

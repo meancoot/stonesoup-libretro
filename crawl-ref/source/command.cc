@@ -1048,44 +1048,6 @@ static void _recap_card_keys(vector<string> &keys)
     }
 }
 
-// Extra info on this item wasn't found anywhere else.
-static void _append_non_item(string &desc, string key)
-{
-    if (ends_with(key, " spell"))
-        key.erase(key.length() - 6);
-
-    spell_type type = spell_by_name(key);
-
-    if (type == SPELL_NO_SPELL)
-        return;
-
-    unsigned int flags = get_spell_flags(type);
-
-    if (flags & SPFLAG_TESTING)
-    {
-        desc += "\nThis is a testing spell, only available via the "
-                "&Z wizard command.";
-    }
-    else if (flags & SPFLAG_MONSTER)
-    {
-        // We can get here only in wizmode, the spell isn't listed otherwise.
-        // And only if it has a description -- no monster ones do.
-        desc += "\nThis is a monster-only spell, only available via the "
-                "&Z wizard command.";
-    }
-    else
-    {
-        desc += "\nOdd, this spell can't be found anywhere. Please "
-                "file a bug report.";
-    }
-
-    if (!you.wizard && (flags & (SPFLAG_TESTING | SPFLAG_MONSTER)))
-    {
-        desc += "\n\nYou aren't in wizard mode, so you shouldn't be "
-                "seeing this entry. Please file a bug report.";
-    }
-}
-
 static bool _is_rod_spell(spell_type spell)
 {
     if (spell == SPELL_NO_SPELL)
@@ -1180,27 +1142,21 @@ static bool _append_books(string &desc, item_def &item, string key)
         desc += "\n\nThis spell can be found in the following book";
         if (books.size() > 1)
             desc += "s";
-        desc += ":\n";
-        desc += comma_separated_line(books.begin(), books.end(), "\n", "\n");
+        desc += ":\n ";
+        desc += comma_separated_line(books.begin(), books.end(), "\n ", "\n ");
 
-        if (!rods.empty())
-        {
-            desc += "\n\n... and the following rod";
-            if (rods.size() > 1)
-                desc += "s";
-            desc += ":\n";
-            desc += comma_separated_line(rods.begin(), rods.end(), "\n", "\n");
-        }
     }
-    else if (!rods.empty()) // rods-only
+
+    if (!rods.empty())
     {
         desc += "\n\nThis spell can be found in the following rod";
         if (rods.size() > 1)
             desc += "s";
-        desc += ":\n";
-        desc += comma_separated_line(rods.begin(), rods.end(), "\n", "\n");
+        desc += ":\n ";
+        desc += comma_separated_line(rods.begin(), rods.end(), "\n ", "\n ");
     }
-    else
+
+    if (books.empty() && rods.empty())
         desc += "\n\nThis spell is not found in any books or rods.";
 
     return true;
@@ -1295,8 +1251,6 @@ static int _do_description(string key, string type, const string &suffix,
                         append_spells(desc, mitm[thing_created]);
                     }
                 }
-                else
-                    _append_non_item(desc, key);
             }
 
             // Now we don't need the item anymore.
@@ -2580,6 +2534,7 @@ int list_wizard_commands(bool do_redraw_screen)
                        "<w>Ctrl-D</w> change enchantments/durations\n"
                        "<w>g</w>      exercise a skill\n"
                        "<w>Ctrl-L</w> change experience level\n"
+                       "<w>p</w>      list props\n"
                        "<w>r</w>      change character's species\n"
                        "<w>s</w>      gain 20000 skill points\n"
                        "<w>S</w>      set skill to level\n"
@@ -2648,6 +2603,7 @@ int list_wizard_commands(bool do_redraw_screen)
                        "<w>a</w>      acquirement\n"
                        "<w>C</w>      (un)curse item\n"
                        "<w>i</w>/<w>I</w>    identify/unidentify inventory\n"
+                       "<w>y</w>/<w>Y</w>    id/unid item types+level items\n"
                        "<w>o</w>/<w>%</w>    create an object\n"
                        "<w>t</w>      tweak object properties\n"
                        "<w>v</w>      show gold value of an item\n"

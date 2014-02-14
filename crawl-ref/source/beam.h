@@ -204,6 +204,8 @@ public:
 
     maybe_bool affects_wall(dungeon_feature_type wall) const;
 
+    int range_used_on_hit() const;
+
 private:
     void do_fire();
     coord_def pos() const;
@@ -227,8 +229,6 @@ private:
     bool need_regress() const;
 
     const actor* beam_source_as_target() const;
-
-    int range_used_on_hit() const;
 
     string zapper() const;
 
@@ -325,6 +325,8 @@ bool poison_monster(monster* mons, const actor* who, int levels = 1,
 bool miasma_monster(monster* mons, const actor* who);
 bool napalm_monster(monster* mons, const actor* who, int levels = 1,
                     bool verbose = true);
+bool curare_actor(actor* source, actor* target, string name,
+                  string source_name);
 void fire_tracer(const monster* mons, bolt &pbolt,
                   bool explode_only = false);
 bool imb_can_splash(coord_def origin, coord_def center,

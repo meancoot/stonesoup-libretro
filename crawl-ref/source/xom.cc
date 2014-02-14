@@ -108,7 +108,7 @@ static const spell_type _xom_tension_spells[] =
     SPELL_SUMMON_HORRIBLE_THINGS, SPELL_CALL_CANINE_FAMILIAR,
     SPELL_SUMMON_ICE_BEAST, SPELL_SUMMON_UGLY_THING,
     SPELL_CONJURE_BALL_LIGHTNING, SPELL_SUMMON_HYDRA, SPELL_SUMMON_DRAGON,
-    SPELL_DEATH_CHANNEL, SPELL_NECROMUTATION
+    SPELL_DEATH_CHANNEL, SPELL_NECROMUTATION, SPELL_CHAIN_OF_CHAOS
 };
 
 static const char *_xom_message_arrays[NUM_XOM_MESSAGE_TYPES][6] =
@@ -904,7 +904,7 @@ static bool _choose_chaos_upgrade(const monster* mon)
 {
     // Only choose monsters that will attack.
     if (!mon->alive() || mons_attitude(mon) != ATT_HOSTILE
-        || mons_is_fleeing(mon) || mons_is_panicking(mon))
+        || mons_is_fleeing(mon))
     {
         return false;
     }
@@ -1342,7 +1342,7 @@ static void _confuse_monster(monster* mons, int sever)
     }
 }
 
-static bool _swap_monsters(monster* m1, monster* m2)
+bool swap_monsters(monster* m1, monster* m2)
 {
     monster& mon1(*m1);
     monster& mon2(*m2);
@@ -1573,7 +1573,7 @@ static int _xom_rearrange_pieces(int sever, bool debug = false)
             while (mon1 == mon2)
                 mon2 = random2(num_mons);
 
-            if (_swap_monsters(mons[mon1], mons[mon2]))
+            if (swap_monsters(mons[mon1], mons[mon2]))
             {
                 if (!did_message)
                 {
@@ -2182,6 +2182,7 @@ static int _xom_enchant_monster(bool helpful, bool debug = false)
         {
             BEAM_HASTE,
             BEAM_MIGHT,
+            BEAM_AGILITY,
             BEAM_INVISIBILITY,
         };
         ench = RANDOM_ELEMENT(enchantments);

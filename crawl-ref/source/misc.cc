@@ -118,6 +118,10 @@ static void _create_monster_hide(const item_def corpse)
     item_def& item = mitm[o];
 
     do_uncurse_item(item, false);
+
+    // Automatically identify the created hide.
+    set_ident_flags(item, ISFLAG_IDENT_MASK);
+
     const monster_type montype =
         static_cast<monster_type>(corpse.orig_monnum);
     if (!invalid_monster_type(montype) && mons_is_unique(montype))
@@ -1016,8 +1020,6 @@ static void _maybe_bloodify_square(const coord_def& where, int amount,
         return;
 
     bool may_bleed = allow_bleeding_on_square(where);
-    if (!spatter && !may_bleed)
-        return;
 
     bool ignite_blood = player_mutation_level(MUT_IGNITE_BLOOD)
                         && you.see_cell(where);
@@ -1034,9 +1036,6 @@ static void _maybe_bloodify_square(const coord_def& where, int amount,
             env.pgrid(where) |= FPROP_BLOODY;
             _orient_wall_blood(where, from, old_blood);
 
-            if (smell_alert && in_bounds(where))
-                blood_smell(12, where);
-
             if (ignite_blood
                 && !cell_is_solid(where)
                 && env.cgrid(where) == EMPTY_CLOUD)
@@ -1044,6 +1043,12 @@ static void _maybe_bloodify_square(const coord_def& where, int amount,
                 place_cloud(CLOUD_FIRE, where, 5 + random2(6), &you);
             }
         }
+
+        // The blood spilled can be detected via blood scent even if the
+        // spot it would fall is prevented from becoming bloodied (for
+        // example, because it is water)
+        if (smell_alert && in_bounds(where))
+            blood_smell(12, where);
 
         if (spatter)
         {
@@ -2196,7 +2201,8 @@ int speed_to_duration(int speed)
 }
 
 bool bad_attack(const monster *mon, string& adj, string& suffix,
-                coord_def attack_pos, bool check_landing_only)
+                bool& would_cause_penance, coord_def attack_pos,
+                bool check_landing_only)
 {
     ASSERT(!crawl_state.game_is_arena());
     bool bad_landing = false;
@@ -2209,6 +2215,7 @@ bool bad_attack(const monster *mon, string& adj, string& suffix,
 
     adj.clear();
     suffix.clear();
+    would_cause_penance = false;
 
     if (!check_landing_only
         && (is_sanctuary(mon->pos()) || is_sanctuary(attack_pos)))
@@ -2223,6 +2230,13 @@ bool bad_attack(const monster *mon, string& adj, string& suffix,
     if (check_landing_only)
         return bad_landing;
 
+    if (you_worship(GOD_JIYVA) && mons_is_slime(mon)
+        && !(mon->is_shapeshifter() && (mon->flags & MF_KNOWN_SHIFTER)))
+    {
+        would_cause_penance = true;
+        return true;
+    }
+
     if (mon->friendly())
     {
         if (you_worship(GOD_OKAWARU))
@@ -2232,9 +2246,18 @@ bool bad_attack(const monster *mon, string& adj, string& suffix,
             monster_info mi(mon, MILEV_NAME);
             if (!mi.is(MB_NAME_UNQUALIFIED))
                 adj += "the ";
+
+            would_cause_penance = true;
         }
         else
+        {
             adj = "your ";
+            if (is_good_god(you.religion)
+                || you_worship(GOD_FEDHAS) && fedhas_protects(mon))
+            {
+                would_cause_penance = true;
+            }
+        }
         return true;
     }
 
@@ -2243,17 +2266,22 @@ bool bad_attack(const monster *mon, string& adj, string& suffix,
         && !tso_unchivalric_attack_safe_monster(mon))
     {
         adj += "helpless ";
+        would_cause_penance = true;
     }
-    if (mon->neutral() && is_good_god(you.religion))
-        adj += "neutral ";
-    else if (mon->wont_attack())
-        adj += "non-hostile ";
 
-    if (you_worship(GOD_JIYVA) && mons_is_slime(mon)
-        && !(mon->is_shapeshifter() && (mon->flags & MF_KNOWN_SHIFTER)))
+    if (mon->neutral() && is_good_god(you.religion))
     {
-        return true;
+        adj += "neutral ";
+        if (you_worship(GOD_SHINING_ONE) || you_worship(GOD_ELYVILON))
+            would_cause_penance = true;
     }
+    else if (mon->wont_attack())
+    {
+        adj += "non-hostile ";
+        if (you_worship(GOD_SHINING_ONE) || you_worship(GOD_ELYVILON))
+            would_cause_penance = true;
+    }
+
     return !adj.empty() || !suffix.empty();
 }
 
@@ -2262,6 +2290,8 @@ bool stop_attack_prompt(const monster* mon, bool beam_attack,
                         bool *prompted, coord_def attack_pos,
                         bool check_landing_only)
 {
+    bool penance = false;
+
     if (prompted)
         *prompted = false;
 
@@ -2272,7 +2302,7 @@ bool stop_attack_prompt(const monster* mon, bool beam_attack,
         return false;
 
     string adj, suffix;
-    if (!bad_attack(mon, adj, suffix, attack_pos, check_landing_only))
+    if (!bad_attack(mon, adj, suffix, penance, attack_pos, check_landing_only))
         return false;
 
     // Listed in the form: "your rat", "Blork the orc".
@@ -2303,8 +2333,9 @@ bool stop_attack_prompt(const monster* mon, bool beam_attack,
     else
         verb = "attack ";
 
-    snprintf(info, INFO_SIZE, "Really %s%s%s?",
-             verb.c_str(), mon_name.c_str(), suffix.c_str());
+    snprintf(info, INFO_SIZE, "Really %s%s%s?%s",
+             verb.c_str(), mon_name.c_str(), suffix.c_str(),
+             penance ? " This attack would place you under penance!" : "");
 
     if (prompted)
         *prompted = true;
@@ -2331,6 +2362,7 @@ bool stop_attack_prompt(targetter &hitfunc, const char* verb,
         return false;
 
     string adj, suffix;
+    bool penance = false;
     counted_monster_list victims;
     for (distance_iterator di(hitfunc.origin, false, true, LOS_RADIUS); di; ++di)
     {
@@ -2342,10 +2374,13 @@ bool stop_attack_prompt(targetter &hitfunc, const char* verb,
         if (affects && !affects(mon))
             continue;
         string adjn, suffixn;
-        if (bad_attack(mon, adjn, suffixn))
+        bool penancen = false;
+        if (bad_attack(mon, adjn, suffixn, penancen))
         {
-            if (victims.empty()) // record the adjectives for the first listed
-                adj = adjn, suffix = suffixn;
+            // record the adjectives for the first listed, or
+            // first that would cause penance
+            if (victims.empty() || penancen && !penance)
+                adj = adjn, suffix = suffixn, penance = penancen;
             victims.add(mon);
         }
     }
@@ -2361,11 +2396,13 @@ bool stop_attack_prompt(targetter &hitfunc, const char* verb,
         adj = "the " + adj;
     mon_name = adj + mon_name;
 
-    snprintf(info, INFO_SIZE, "Really %s %s%s?",
-             verb, mon_name.c_str(), suffix.c_str());
+    snprintf(info, INFO_SIZE, "Really %s %s%s?%s",
+             verb, mon_name.c_str(), suffix.c_str(),
+             penance ? " This attack would place you under penance!" : "");
 
     if (prompted)
         *prompted = true;
+
     if (yesno(info, false, 'n'))
         return false;
     else

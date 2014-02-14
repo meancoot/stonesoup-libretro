@@ -43,6 +43,7 @@
 #include "macro.h"
 #include "menu.h"
 #include "message.h"
+#include "mon-book.h"
 #include "mon-chimera.h"
 #include "mon-stuff.h"
 #include "mon-util.h"
@@ -417,8 +418,10 @@ static string _randart_descrip(const item_def &item)
         { ARTP_STRENGTH, "It affects your strength (%d).", false},
         { ARTP_INTELLIGENCE, "It affects your intelligence (%d).", false},
         { ARTP_DEXTERITY, "It affects your dexterity (%d).", false},
-        { ARTP_ACCURACY, "It affects your accuracy (%d).", false},
-        { ARTP_DAMAGE, "It affects your damage-dealing abilities (%d).", false},
+        { ARTP_ACCURACY, "It affects your accuracy with ranged weapons and "
+                         "melee attacks (%d).", false},
+        { ARTP_DAMAGE, "It affects your damage with ranged weapons and melee "
+                       "attacks (%d).", false},
         { ARTP_FIRE, "fire", true},
         { ARTP_COLD, "cold", true},
         { ARTP_ELECTRICITY, "It insulates you from electricity.", false},
@@ -2969,7 +2972,7 @@ static string _describe_draconian_colour(int species)
 static string _describe_draconian(const monster_info& mi)
 {
     string description;
-    const int subsp = mi.draco_subspecies();
+    const int subsp = mi.draco_or_demonspawn_subspecies();
 
     if (subsp == MONS_DRACONIAN)
         description += "A ";
@@ -3085,6 +3088,75 @@ static string _describe_chimera(const monster_info& mi)
     return description;
 }
 
+static string _describe_demonspawn_role(monster_type type)
+{
+    switch (type)
+    {
+    case MONS_BLOOD_SAINT:
+        return "It is caked in blood and dusty residue from the wake of the "
+               "devastation it weaves, wreaking divinely-inspired destruction.";
+    case MONS_CHAOS_CHAMPION:
+        return "Even other demonspawn fear its wild, maddened gaze, as well "
+               "as its reality-warping powers from the chaos gods.";
+    case MONS_WARMONGER:
+        return "It is ever-ready for eternal conflict untainted by magic, "
+               "and fights as easily as it breathes for the gods of battle.";
+    case MONS_CORRUPTER:
+        return "Space and flesh shimmer and twist in its vicinity, as if "
+               "afraid of this unwavering servant of celestial corruption.";
+    case MONS_BLACK_SUN:
+        return "Its endless devotion to deities of death have left it with "
+               "an unholy radiance, shining a brilliant darkness.";
+    default:
+        return "";
+    }
+}
+
+static string _describe_demonspawn_base(int species)
+{
+    switch (species)
+    {
+    case MONS_MONSTROUS_DEMONSPAWN:
+        return "more beast now than whatever species it is descended from";
+    case MONS_GELID_DEMONSPAWN:
+        return "softly glowing with an icy aura";
+    case MONS_INFERNAL_DEMONSPAWN:
+        return "giving off an intense heat";
+    case MONS_PUTRID_DEMONSPAWN:
+        return "surrounded with sickly fumes and gases";
+    case MONS_TORTUROUS_DEMONSPAWN:
+        return "menacing with bony spines";
+    }
+    return "";
+}
+
+static string _describe_demonspawn(const monster_info& mi)
+{
+    string description;
+    const int subsp = mi.draco_or_demonspawn_subspecies();
+
+
+    if (subsp != MONS_DEMONSPAWN)
+    {
+        description += "A demonic-looking humanoid";
+        const string demonspawn_base = _describe_demonspawn_base(subsp);
+        if (!demonspawn_base.empty())
+            description += ", " + demonspawn_base;
+        description += ".";
+    }
+    else
+        description += "A vaguely demonic-looking humanoid.";
+
+    if (subsp != mi.type)
+    {
+        const string demonspawn_role = _describe_demonspawn_role(mi.type);
+        if (!demonspawn_role.empty())
+            description += " " + demonspawn_role;
+    }
+
+    return description;
+}
+
 static const char* _get_resist_name(mon_resist_flags res_type)
 {
     switch (res_type)
@@ -3135,7 +3207,7 @@ static string _monster_spells_description(const monster_info& mi)
     if (!mi.is_spellcaster())
         return "";
 
-    const vector<mon_spellbook_type> books = mi.get_spellbooks();
+    const vector<mon_spellbook_type> books = get_spellbooks(mi);
     const size_t num_books = books.size();
 
     // If there are really really no spells, print nothing.
@@ -3216,6 +3288,39 @@ static string _monster_spells_description(const monster_info& mi)
     }
 
     return result.str();
+}
+
+static const char *_speed_description(int speed)
+{
+    // These thresholds correspond to the player mutations for fast and slow.
+    ASSERT(speed != 10);
+    if (speed < 7)
+        return "extremely slowly";
+    else if (speed < 8)
+        return "very slowly";
+    else if (speed < 10)
+        return "slowly";
+    else if (speed > 15)
+        return "extremely quickly";
+    else if (speed > 13)
+        return "very quickly";
+    else if (speed > 10)
+        return "quickly";
+
+    return "buggily";
+}
+
+static void _add_energy_to_string(int speed, int energy, string what,
+                                  vector<string> &fast, vector<string> &slow)
+{
+    if (energy == 10)
+        return;
+
+    const int act_speed = (speed * 10) / energy;
+    if (act_speed > 10)
+        fast.push_back(what + " " + _speed_description(act_speed));
+    if (act_speed < 10)
+        slow.push_back(what + " " + _speed_description(act_speed));
 }
 
 // Describe a monster's (intrinsic) resistances, speed and a few other
@@ -3321,7 +3426,7 @@ static string _monster_stat_description(const monster_info& mi)
 
     const int mr = mi.res_magic();
     // How resistant is it? Same scale as the player.
-    if (mr >= 10)
+    if (mr >= 40)
     {
         result << uppercase_first(pronoun)
                << make_stringf(" is %s to hostile enchantments.\n",
@@ -3348,8 +3453,10 @@ static string _monster_stat_description(const monster_info& mi)
 
     // Unusual monster speed.
     const int speed = mi.base_speed();
+    bool did_speed = false;
     if (speed != 10 && speed != 0)
     {
+        did_speed = true;
         result << uppercase_first(pronoun) << " is ";
         if (speed < 7)
             result << "very slow";
@@ -3361,8 +3468,67 @@ static string _monster_stat_description(const monster_info& mi)
             result << "very fast";
         else if (speed > 10)
             result << "fast";
+    }
+    const mon_energy_usage def = DEFAULT_ENERGY;
+    if (!(mi.menergy == def))
+    {
+        const mon_energy_usage me = mi.menergy;
+        vector<string> fast, slow;
+        if (!did_speed)
+            result << uppercase_first(pronoun) << " ";
+        _add_energy_to_string(speed, me.move, "covers ground", fast, slow);
+        // since MOVE_ENERGY also sets me.swim
+        if (me.swim != me.move)
+            _add_energy_to_string(speed, me.swim, "swims", fast, slow);
+        _add_energy_to_string(speed, me.attack, "attacks", fast, slow);
+        _add_energy_to_string(speed, me.missile, "shoots", fast, slow);
+        _add_energy_to_string(
+            speed, me.spell,
+            mi.is_actual_spellcaster() ? "casts spells" :
+            mi.is_priest()             ? "uses invocations"
+                                       : "uses natural abilities", fast, slow);
+        _add_energy_to_string(speed, me.special, "uses special abilities",
+                              fast, slow);
+        _add_energy_to_string(speed, me.item, "uses items", fast, slow);
+
+        if (speed >= 10)
+        {
+            if (did_speed && fast.size() == 1)
+                result << " and " << fast[0];
+            else if (!fast.empty())
+            {
+                if (did_speed)
+                    result << ", ";
+                result << comma_separated_line(fast.begin(), fast.end());
+            }
+            if (!slow.empty())
+            {
+                if (did_speed || !fast.empty())
+                    result << ", but ";
+                result << comma_separated_line(slow.begin(), slow.end());
+            }
+        }
+        else if (speed < 10)
+        {
+            if (did_speed && slow.size() == 1)
+                result << " and " << slow[0];
+            else if (!slow.empty())
+            {
+                if (did_speed)
+                    result << ", ";
+                result << comma_separated_line(slow.begin(), slow.end());
+            }
+            if (!fast.empty())
+            {
+                if (did_speed || !slow.empty())
+                    result << ", but ";
+                result << comma_separated_line(fast.begin(), fast.end());
+            }
+        }
         result << ".\n";
     }
+    else if (did_speed)
+        result << ".\n";
 
     // Can the monster fly, and how?
     // This doesn't give anything away since no (very) ugly things can
@@ -3524,6 +3690,21 @@ void get_monster_db_desc(const monster_info& mi, describe_info &inf,
         break;
     }
 
+    case MONS_MONSTROUS_DEMONSPAWN:
+    case MONS_GELID_DEMONSPAWN:
+    case MONS_INFERNAL_DEMONSPAWN:
+    case MONS_PUTRID_DEMONSPAWN:
+    case MONS_TORTUROUS_DEMONSPAWN:
+    case MONS_BLOOD_SAINT:
+    case MONS_CHAOS_CHAMPION:
+    case MONS_WARMONGER:
+    case MONS_CORRUPTER:
+    case MONS_BLACK_SUN:
+    {
+        inf.body << "\n" << _describe_demonspawn(mi) << "\n";
+        break;
+    }
+
     case MONS_PLAYER_GHOST:
         inf.body << "The apparition of " << get_ghost_description(mi) << ".\n";
         break;
@@ -3580,8 +3761,17 @@ void get_monster_db_desc(const monster_info& mi, describe_info &inf,
         stair_use = true;
     }
 
-    if (mi.intel() <= I_INSECT)
-        inf.body << uppercase_first(mi.pronoun(PRONOUN_SUBJECTIVE)) << " is mindless.\n";
+    if (mi.intel() <= I_PLANT)
+    {
+        inf.body << uppercase_first(mi.pronoun(PRONOUN_SUBJECTIVE))
+                 << " is mindless.\n";
+    }
+    else if (mi.intel() <= I_INSECT && you_worship(GOD_ELYVILON))
+    {
+        inf.body << uppercase_first(mi.pronoun(PRONOUN_SUBJECTIVE))
+                 << " is not intelligent enough to pacify.\n";
+    }
+
 
     if (mi.is(MB_CHAOTIC))
     {
@@ -3819,6 +4009,7 @@ string get_ghost_description(const monster_info &mi, bool concise)
     case SP_MUMMY:
     case SP_GHOUL:
     case SP_FORMICID:
+    case SP_VINE_STALKER:
         str += 10;
         break;
 
@@ -4151,6 +4342,10 @@ static const char *divine_title[NUM_GODS][8] =
     // Ashenzari -- divination theme
     {"Star-crossed",       "Cursed",                "Initiated",                "Seer",
      "Soothsayer",         "Oracle",                "Illuminatus",              "Omniscient"},
+
+    // Dithmenos -- darkness theme
+    {"Illuminated",        "Gloomy",                "Aphotic",                  "Caliginous",
+     "Darkened",           "Shadowed",              "Eclipsing",                "Eternal Night"},
 };
 
 static int _piety_level(int piety)
@@ -4346,16 +4541,13 @@ static void _detailed_god_description(god_type which_god)
                     case NEM_GIFT_DESTRUCTION:
                         desc = "decks of Destruction -- weapons and ammunition";
                         break;
-                    case NEM_GIFT_DUNGEONS:
-                        desc = "decks of Dungeons    -- jewellery, books, "
-                                                    "miscellaneous items";
-                        break;
                     case NEM_GIFT_SUMMONING:
                         desc = "decks of Summoning   -- corpses, chunks, blood";
                         break;
                     case NEM_GIFT_WONDERS:
-                        desc = "decks of Wonders     -- consumables: food, potions, "
-                                                    "scrolls, wands";
+                        desc = "decks of Wonders     -- Other items: food, potions, "
+                                                    "scrolls, wands, jewellery, books, "
+                                                    "miscellaneous items";
                         break;
                     }
                     broken += make_stringf(" <white>%c</white> %s%s%s\n",

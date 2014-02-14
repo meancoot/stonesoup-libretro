@@ -19,6 +19,7 @@
 #include "dactions.h"
 #include "effects.h"
 #include "env.h"
+#include "fight.h"
 #include "files.h"
 #include "food.h"
 #include "fprop.h"
@@ -34,6 +35,7 @@
 #include "misc.h"
 #include "mon-act.h"
 #include "mon-behv.h"
+#include "mon-cast.h"
 #include "mon-place.h"
 #include "mgen_data.h"
 #include "mon-stuff.h"
@@ -57,6 +59,8 @@
 #include "stuff.h"
 #include "target.h"
 #include "terrain.h"
+#include "throw.h"
+#include "traps.h"
 #include "unwind.h"
 #include "view.h"
 #include "viewgeom.h"
@@ -498,8 +502,6 @@ static int _zin_check_recite_to_single_monster(const monster *mon,
     if (mon->has_attack_flavour(AF_ROT))
         eligibility[RECITE_IMPURE]++;
     if (mon->has_attack_flavour(AF_STEAL))
-        eligibility[RECITE_IMPURE]++;
-    if (mon->has_attack_flavour(AF_STEAL_FOOD))
         eligibility[RECITE_IMPURE]++;
     if (mon->has_attack_flavour(AF_PLAGUE))
         eligibility[RECITE_IMPURE]++;
@@ -3406,4 +3408,293 @@ void spare_beogh_convert()
         mpr("With a roar of approval, the orcs welcome you as one of their own,"
             " and spare your life.");
     }
+}
+
+bool dithmenos_shadow_step()
+{
+    // You can shadow-step anywhere within your umbra.
+    ASSERT(you.umbra_radius2() > -1);
+    const int range = isqrt_ceil(you.umbra_radius2());
+
+    targetter_jump tgt(&you, range, false, true);
+    direction_chooser_args args;
+    args.hitfunc = &tgt;
+    args.restricts = DIR_JUMP;
+    args.mode = TARG_HOSTILE;
+    args.range = range;
+    args.just_looking = false;
+    args.needs_path = false;
+    args.top_prompt = "Aiming: <white>Shadow Step</white>";
+    dist sdirect;
+    direction(sdirect, args);
+    if (!sdirect.isValid || tgt.landing_site.origin())
+        return false;
+
+    // Check for hazards.
+    bool zot_trap_prompted = false,
+         trap_prompted = false,
+         exclusion_prompted = false,
+         cloud_prompted = false,
+         terrain_prompted = false;
+
+    for (set<coord_def>::const_iterator site = tgt.additional_sites.begin();
+         site != tgt.additional_sites.end(); site++)
+    {
+        if (!cloud_prompted
+            && !check_moveto_cloud(*site, "shadow step", &cloud_prompted))
+        {
+            return false;
+        }
+
+        if (!zot_trap_prompted)
+        {
+            trap_def* trap = find_trap(*site);
+            if (trap && env.grid(*site) != DNGN_UNDISCOVERED_TRAP
+                && trap->type == TRAP_ZOT)
+            {
+                if (!check_moveto_trap(*site, "shadow step",
+                                       &trap_prompted))
+                {
+                    you.turn_is_over = false;
+                    return false;
+                }
+                zot_trap_prompted = true;
+            }
+            else if (!trap_prompted
+                     && !check_moveto_trap(*site, "shadow step",
+                                           &trap_prompted))
+            {
+                you.turn_is_over = false;
+                return false;
+            }
+        }
+
+        if (!exclusion_prompted
+            && !check_moveto_exclusion(*site, "shadow step",
+                                       &exclusion_prompted))
+        {
+            return false;
+        }
+
+        if (!terrain_prompted
+            && !check_moveto_terrain(*site, "shadow step", "",
+                                     &terrain_prompted))
+        {
+            return false;
+        }
+    }
+
+    // XXX: This only ever fails if something's on the landing site;
+    // perhaps this should be handled more gracefully.
+    if (!you.move_to_pos(tgt.landing_site))
+    {
+        mpr("Something blocks your shadow step.");
+        return true;
+    }
+
+    const actor *victim = actor_at(sdirect.target);
+    mprf("You step into %s shadow.",
+         apostrophise(victim->name(DESC_THE)).c_str());
+
+    return true;
+}
+
+static bool _dithmenos_shadow_acts()
+{
+    if (!you_worship(GOD_DITHMENOS) || you.piety < piety_breakpoint(3))
+        return false;
+
+    // 10% chance at 4* piety; 50% chance at 200 piety.
+    const int range = MAX_PIETY - piety_breakpoint(3);
+    const int min   = range / 5;
+    return x_chance_in_y(min + ((range - min)
+                                * (you.piety - piety_breakpoint(3))
+                                / (MAX_PIETY - piety_breakpoint(3))),
+                         2 * range);
+}
+
+static monster* _dithmenos_shadow_monster()
+{
+    if (monster_at(you.pos()))
+        return NULL;
+
+    int wpn_index  = NON_ITEM;
+    int ammo_index = NON_ITEM;
+
+    // Do a basic clone of the weapon.
+    item_def* wpn = you.weapon();
+    if (wpn
+        && (wpn->base_type == OBJ_WEAPONS
+            || wpn->base_type == OBJ_STAVES
+            || wpn->base_type == OBJ_RODS))
+    {
+        wpn_index = get_mitm_slot(10);
+        if (wpn_index == NON_ITEM)
+            return NULL;
+        item_def& new_item = mitm[wpn_index];
+        if (wpn->base_type == OBJ_STAVES)
+        {
+            new_item.base_type = OBJ_WEAPONS;
+            new_item.sub_type  = WPN_STAFF;
+        }
+        else if (wpn->base_type == OBJ_RODS)
+        {
+            new_item.base_type = OBJ_WEAPONS;
+            new_item.sub_type  = WPN_ROD;
+        }
+        else
+        {
+            new_item.base_type = wpn->base_type;
+            new_item.sub_type  = wpn->sub_type;
+        }
+        new_item.colour   = wpn->colour;
+        new_item.quantity = 1;
+        new_item.flags   |= ISFLAG_SUMMONED;
+    }
+    const int missile = you.m_quiver->get_fire_item();
+    if (missile != -1)
+    {
+        ammo_index = get_mitm_slot(10);
+        if (ammo_index == NON_ITEM)
+        {
+            if (wpn_index != NON_ITEM)
+                destroy_item(wpn_index);
+            return NULL;
+        }
+        item_def& new_item = mitm[ammo_index];
+        item_def *ammo     = &you.inv[missile];
+        new_item.base_type = ammo->base_type;
+        new_item.sub_type  = ammo->sub_type;
+        new_item.colour    = ammo->colour;
+        new_item.quantity  = 1;
+        new_item.flags    |= ISFLAG_SUMMONED;
+    }
+
+    monster* mon = get_free_monster();
+    if (!mon)
+    {
+        if (wpn_index)
+            destroy_item(wpn_index);
+        return NULL;
+    }
+
+    mon->type       = MONS_PLAYER_SHADOW;
+    mon->behaviour  = BEH_SEEK;
+    mon->attitude   = ATT_FRIENDLY;
+    mon->flags      = MF_NO_REWARD | MF_JUST_SUMMONED | MF_SEEN
+                    | MF_WAS_IN_VIEW | MF_HARD_RESET
+                    | MF_ACTUAL_SPELLS;
+    mon->hit_points = you.hp;
+    mon->hit_dice   = min(1,
+                          you.skill_rdiv(wpn_index != NON_ITEM
+                                         ? weapon_skill(mitm[wpn_index])
+                                         : SK_UNARMED_COMBAT, 10, 20));
+    mon->set_position(you.pos());
+    mon->mid        = MID_PLAYER;
+    mon->inv[MSLOT_WEAPON]  = wpn_index;
+    mon->inv[MSLOT_MISSILE] = ammo_index;
+
+    mgrd(you.pos()) = mon->mindex();
+
+    return mon;
+}
+
+static void _dithmenos_shadow_monster_reset(monster *mon)
+{
+    if (mon->inv[MSLOT_WEAPON] != NON_ITEM)
+        destroy_item(mon->inv[MSLOT_WEAPON]);
+    if (mon->inv[MSLOT_MISSILE] != NON_ITEM)
+        destroy_item(mon->inv[MSLOT_MISSILE]);
+
+    mon->reset();
+}
+
+void dithmenos_shadow_melee(actor* target)
+{
+    if (!target
+        || !target->alive()
+        || !_dithmenos_shadow_acts())
+    {
+        return;
+    }
+
+    monster* mon = _dithmenos_shadow_monster();
+    if (!mon)
+        return;
+
+    mon->target     = target->pos();
+    mon->foe        = target->mindex();
+
+    mprf("%s attacks!", mon->name(DESC_THE).c_str());
+    fight_melee(mon, target);
+
+    _dithmenos_shadow_monster_reset(mon);
+}
+
+void dithmenos_shadow_throw(coord_def target)
+{
+    if (target.origin()
+        || !_dithmenos_shadow_acts())
+    {
+        return;
+    }
+
+    monster* mon = _dithmenos_shadow_monster();
+    if (!mon)
+        return;
+
+    if (mon->inv[MSLOT_MISSILE] != NON_ITEM)
+    {
+        mon->target = target;
+
+        bolt beem;
+        beem.target = target;
+        mprf("%s attacks!", mon->name(DESC_THE).c_str());
+        setup_monster_throw_beam(mon, beem);
+        beem.item = &mitm[mon->inv[MSLOT_MISSILE]];
+        mons_throw(mon, beem, mon->inv[MSLOT_MISSILE]);
+    }
+
+    _dithmenos_shadow_monster_reset(mon);
+}
+
+void dithmenos_shadow_spell(bolt* orig_beam, spell_type spell)
+{
+    if (!orig_beam
+        || orig_beam->target.origin()
+        || (orig_beam->is_enchantment() && !is_valid_mon_spell(spell))
+        || !_dithmenos_shadow_acts())
+    {
+        return;
+    }
+
+    const coord_def target = orig_beam->target;
+
+    monster* mon = _dithmenos_shadow_monster();
+    if (!mon)
+        return;
+
+    // Don't let shadow spells get too powerful.
+    mon->hit_dice = max(1,
+                        min(3 * spell_difficulty(spell),
+                            you.experience_level) / 2);
+
+    mon->target = target;
+    if (actor_at(target))
+        mon->foe = actor_at(target)->mindex();
+
+    spell_type shadow_spell = spell;
+    if (!orig_beam->is_enchantment())
+    {
+        shadow_spell = (orig_beam->is_beam) ? SPELL_SHADOW_BOLT
+                                            : SPELL_SHADOW_SHARD;
+    }
+
+    bolt beem;
+    beem.target = target;
+    mprf(MSGCH_FRIEND_SPELL, "%s mimicks your spell!",
+         mon->name(DESC_THE).c_str());
+    mons_cast(mon, beem, shadow_spell, false, false);
+
+    _dithmenos_shadow_monster_reset(mon);
 }

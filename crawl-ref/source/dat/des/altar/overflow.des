@@ -127,6 +127,21 @@ xxxxx.xxxxx
      @
 ENDMAP
 
+NAME:  cheibrodos_chained_mummies
+TAGS:  temple_overflow_1
+TAGS:  temple_overflow_ashenzari uniq_altar_ashenzari
+DEPTH: D:3-9
+MONS:  mummy
+KFEAT: _ = altar_ashenzari
+KFEAT: m = iron_grate
+MAP
+.............
+.mmm.....mmm.
+.m1mmc_cmm1m.
+.mmm.....mmm.
+.............
+ENDMAP
+
 ### Cheibriados overflow altars ###############################################
 
 NAME:   cheibriados_altar_1
@@ -231,7 +246,8 @@ ENDMAP
 
 NAME:   chei_snail_safe_becter
 TAGS:   overflow_altar_cheibriados transparent mini_float no_monster_gen
-DEPTH:  D:2-9
+DEPTH:  D:4-9
+WEIGHT: 5
 KMONS:  a = agate snail
 NSUBST: ' = 1:a / *:.
 KFEAT:  _ = altar_cheibriados
@@ -246,6 +262,92 @@ MAP
 .x.....xx.
 .xxxxxxx..
 .........
+ENDMAP
+
+NAME:   cheibrodos_slug_habitat
+TAGS:   no_item_gen no_monster_gen temple_overflow_1
+TAGS:   temple_overflow_cheibriados uniq_altar_cheibriados
+DEPTH:  D:5-9
+WEIGHT: 5
+KFEAT:  _ = altar_cheibriados
+MONS:   giant slug
+MAP
+.............
+.xxxxx.xxxxx.
+.xTWWxxxWWTx.
+.xWWWWWWWWWx.
+.xWWWxWxWWWx.
+.xxWxx.xxWxx.
+..xWm._.mWx..
+.xxWxx1xxWxx.
+.xWWWxmxWWWx.
+.xWWWWWWWWWx.
+.xTWWx+xWWTx.
+.xxxxx.xxxxx.
+......@......
+ENDMAP
+
+### Dithmenos overflow altars ################################################
+
+NAME:   grunt_dithmenos_smoke
+TAGS:   uniq_altar_dithmenos temple_overflow_1 temple_overflow_dithmenos decor
+DEPTH:  D:2-
+KFEAT:  C = altar_dithmenos
+MARKER: C = lua:fog_machine { cloud_type = "black smoke", \
+                              pow_min = 10, pow_max = 20, \
+                              delay = 100, size = 1, walk_dist = 1 }
+: interest_check(_G)
+MAP
+...
+.C.
+...
+ENDMAP
+
+# Reflect upon the darkness, mortal.
+NAME:   grunt_dithmenos_smoke_and_mirrors
+TAGS:   uniq_altar_dithmenos temple_overflow_1 temple_overflow_dithmenos decor
+DEPTH:  D:2-
+KFEAT:  C = altar_dithmenos
+KFEAT:  O = .
+MARKER: O = lua:fog_machine { cloud_type = "black smoke", \
+                              pow_min = 25, pow_max = 25, \
+                              delay = 30, size = 1, walk_dist = 0 }
+: interest_check(_G)
+MAP
+  b.b
+ b.O.b
+b.b.b.b
+.O.C.O.
+b.b.b.b
+ b.O.b
+  b.b
+ENDMAP
+
+NAME:  grunt_dithmenos_shadows
+TAGS:  uniq_altar_dithmenos temple_overflow_1 temple_overflow_dithmenos decor
+DEPTH: D:4-
+KFEAT: C = altar_dithmenos
+{{
+  if you.absdepth() >= 14 then
+     mons("shadow")
+  else
+     local imp_weight = 9 - you.absdepth()
+     if imp_weight > 0 then
+         local phantom_weight = 9 - imp_weight
+         mons("phantom w:" .. phantom_weight ..
+              " / shadow imp w:" .. imp_weight)
+     else
+         mons("shadow imp")
+     end
+  end
+}}
+: interest_check(_G)
+MAP
+ccccc
+c.C.c
+c.1.c
+c...c
+cc+cc
 ENDMAP
 
 ### Elyvilon overflow altars ##################################################
@@ -700,7 +802,7 @@ xx.x.x.x.x.xx
 x.V.x.V.x.V.x
 xx.x.x.x.x.xx
 xxx.V.x.V.xxx
-xx.x.X.x.x.xx
+xx.x.x.x.x.xx
 xx..x.V.x..xx
 xx.x.x.x.x.xx
 xxx.V.x.V.xxx
@@ -1113,15 +1215,14 @@ NAME:   okawaru_gym_becter
 TAGS:   uniq_altar_okawaru temple_overflow_1 temple_overflow_okawaru
 DEPTH:  2-9
 TAGS:   transparent mini_float
-MONS:   training dummy ; club
 KFEAT:  _ = altar_okawaru
 MAP
    .....
  .........
  .vv...vv.
-..v1...1v..
+..v.....v..
 ....._.....
-..v1...1v..
+..v.....v..
  .vv...vv.
  .........
    .....

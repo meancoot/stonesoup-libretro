@@ -104,6 +104,7 @@ enum ability_flag_type
     ABFLAG_LEVEL_DRAIN    = 0x00010000, // drains 2 levels
     ABFLAG_STAT_DRAIN     = 0x00020000, // stat drain
     ABFLAG_ZOTDEF         = 0x00040000, // ZotDef ability, w/ appropriate hotkey
+    ABFLAG_SKILL_DRAIN    = 0x00080000, // drains skill levels
 };
 
 static int  _find_ability_slot(const ability_def& abil);
@@ -190,6 +191,9 @@ ability_type god_abilities[NUM_GODS][MAX_GOD_ABILITIES] =
     // Ashenzari
     { ABIL_NON_ABILITY, ABIL_NON_ABILITY, ABIL_NON_ABILITY,
       ABIL_ASHENZARI_SCRYING, ABIL_ASHENZARI_TRANSFER_KNOWLEDGE },
+    // Dithmenos
+    { ABIL_NON_ABILITY, ABIL_DITHMENOS_SHADOW_STEP, ABIL_NON_ABILITY,
+      ABIL_NON_ABILITY, ABIL_DITHMENOS_SHADOW_FORM },
 };
 
 // The description screen was way out of date with the actual costs.
@@ -237,7 +241,7 @@ static const ability_def Ability_List[] =
     { ABIL_MUMMY_RESTORATION, "Self-Restoration",
       1, 0, 0, 0, 0, ABFLAG_PERMANENT_MP},
 
-    { ABIL_DIG, "Dig", 0, 0, 75, 0, 0, ABFLAG_NONE},
+    { ABIL_DIG, "Dig", 0, 0, 0, 0, 0, ABFLAG_INSTANT},
     { ABIL_SHAFT_SELF, "Shaft Self", 0, 0, 250, 0, 0, ABFLAG_DELAY},
 
     // EVOKE abilities use Evocations and come from items.
@@ -396,6 +400,12 @@ static const ability_def Ability_List[] =
       0, 0, 0, 20, 0, ABFLAG_NONE},
     { ABIL_ASHENZARI_END_TRANSFER, "End Transfer Knowledge",
       0, 0, 0, 0, 0, ABFLAG_NONE},
+
+    // Dithmenos
+    { ABIL_DITHMENOS_SHADOW_STEP, "Shadow Step",
+      4, 0, 0, 4, 0, ABFLAG_NONE },
+    { ABIL_DITHMENOS_SHADOW_FORM, "Shadow Form",
+      9, 0, 0, 10, 0, ABFLAG_SKILL_DRAIN },
 
     { ABIL_STOP_RECALL, "Stop Recall", 0, 0, 0, 0, 0, ABFLAG_NONE},
 
@@ -707,6 +717,9 @@ const string make_cost_description(ability_type ability)
     if (abil.flags & ABFLAG_STAT_DRAIN)
         ret += ", Stat drain";
 
+    if (abil.flags & ABFLAG_SKILL_DRAIN)
+        ret += ", Skill drain";
+
     // If we haven't output anything so far, then the effect has no cost
     if (ret.empty())
         return "None";
@@ -807,6 +820,9 @@ static const string _detailed_cost_description(ability_type ability)
     if (abil.flags & ABFLAG_STAT_DRAIN)
         ret << "\nIt will temporarily drain your strength, intelligence or dexterity when used.";
 
+    if (abil.flags & ABFLAG_SKILL_DRAIN)
+        ret << "\nIt will temporarily drain your skills when used.";
+
     return ret.str();
 }
 
@@ -825,15 +841,35 @@ static ability_type _fixup_ability(ability_type ability)
     case ABIL_BEOGH_RECALL_ORCISH_FOLLOWERS:
         if (!you.recall_list.empty())
             return ABIL_STOP_RECALL;
+        return ability;
+
+    case ABIL_EVOKE_BERSERK:
+    case ABIL_TROG_BERSERK:
+        switch (you.species)
+        {
+        case SP_DJINNI:
+        case SP_GHOUL:
+        case SP_MUMMY:
+        case SP_FORMICID:
+            return ABIL_NON_ABILITY;
+        default:
+            return ability;
+        }
 
     case ABIL_OKAWARU_FINESSE:
     case ABIL_BLINK:
     case ABIL_WISP_BLINK:
     case ABIL_EVOKE_BLINK:
-    case ABIL_EVOKE_BERSERK:
-    case ABIL_TROG_BERSERK:
         if (you.species == SP_FORMICID)
             return ABIL_NON_ABILITY;
+        else
+            return ability;
+
+    case ABIL_DITHMENOS_SHADOW_FORM:
+        if (you.species == SP_MUMMY || you.species == SP_GHOUL)
+            return ABIL_NON_ABILITY;
+        else
+            return ability;
 
     default:
         return ability;
@@ -916,8 +952,6 @@ talent get_talent(ability_type ability, bool check_confused)
     case ABIL_MAKE_GRENADES:
     case ABIL_MAKE_SAGE:
     case ABIL_REMOVE_CURSE:
-    case ABIL_DIG:
-    case ABIL_SHAFT_SELF:
         failure = 0;
         break;
 
@@ -974,6 +1008,11 @@ talent get_talent(ability_type ability, bool check_confused)
 
     case ABIL_RECHARGING:       // this is for deep dwarves {1KB}
         failure = 45 - (2 * you.experience_level);
+        break;
+
+    case ABIL_DIG:
+    case ABIL_SHAFT_SELF:
+        failure = 0;
         break;
         // end species abilities (some mutagenic)
 
@@ -1037,6 +1076,7 @@ talent get_talent(ability_type ability, bool check_confused)
     case ABIL_LUGONU_ABYSS_EXIT:
     case ABIL_FEDHAS_SUNLIGHT:
     case ABIL_FEDHAS_EVOLUTION:
+    case ABIL_DITHMENOS_SHADOW_STEP:
         invoc = true;
         failure = 30 - (you.piety / 20) - you.skill(SK_INVOCATIONS, 6);
         break;
@@ -1153,6 +1193,7 @@ talent get_talent(ability_type ability, bool check_confused)
     case ABIL_ELYVILON_DIVINE_VIGOUR:
     case ABIL_LUGONU_ABYSS_ENTER:
     case ABIL_CHEIBRIADOS_TIME_STEP:
+    case ABIL_DITHMENOS_SHADOW_FORM:
         invoc = true;
         failure = 80 - (you.piety / 25) - you.skill(SK_INVOCATIONS, 4);
         break;
@@ -1409,6 +1450,16 @@ static bool _check_ability_possible(const ability_def& abil,
                 canned_msg(MSG_TOO_HUNGRY);
             return false;
         }
+    }
+
+    // in case of mp rot ability, check is the player have enough natural MP
+    // (avoid use of ring/staf of magical power)
+    if ((abil.flags & ABFLAG_PERMANENT_MP)
+        && get_real_mp(false) < (int)abil.mp_cost)
+    {
+        if (!quiet)
+            mpr("You haven't enough innate magic capacity to sacrifice.");
+        return false;
     }
 
     switch (abil.ability)
@@ -1687,8 +1738,7 @@ bool activate_talent(const talent& tal)
     // Check that we can afford to pay the costs.
     // Note that mutation shenanigans might leave us with negative MP,
     // so don't fail in that case if there's no MP cost.
-    if (abil.mp_cost > 0
-        && !enough_mp(abil.mp_cost, false, true, !(abil.flags & ABFLAG_PERMANENT_MP)))
+    if (abil.mp_cost > 0 && !enough_mp(abil.mp_cost, false, true))
     {
         crawl_state.zero_turns_taken();
         return false;
@@ -1964,18 +2014,16 @@ static bool _do_ability(const ability_def& abil)
         break;
 
     case ABIL_DIG:
-        power = 0;
-        beam.range = LOS_RADIUS;
-
-        if (!spell_direction(abild, beam, DIR_NONE, TARG_ANY, 0,
-                             true, true, false, NULL,
-                             "Aiming: Dig",
-                             true))
+        if (!you.digging)
         {
-            return false;
+            you.digging = true;
+            mpr("You extend your mandibles.");
         }
         else
-            zapping(ZAP_DIG, power, beam);
+        {
+            mpr("You are already prepared to dig.");
+            return false;
+        }
         break;
 
     case ABIL_SHAFT_SELF:
@@ -2456,6 +2504,8 @@ static bool _do_ability(const ability_def& abil)
         break;
 
     case ABIL_MAKHLEB_MINOR_DESTRUCTION:
+        beam.range = 8;
+
         if (!spell_direction(spd, beam))
             return false;
 
@@ -2470,11 +2520,11 @@ static bool _do_ability(const ability_def& abil)
 
         switch (random2(5))
         {
-        case 0: beam.range =  8; zapping(ZAP_THROW_FLAME, power, beam); break;
-        case 1: beam.range =  8; zapping(ZAP_PAIN,  power, beam); break;
-        case 2: beam.range =  5; zapping(ZAP_STONE_ARROW, power, beam); break;
-        case 3: beam.range =  8; zapping(ZAP_SHOCK, power, beam); break;
-        case 4: beam.range =  8; zapping(ZAP_BREATHE_ACID, power/2, beam); break;
+        case 0: zapping(ZAP_THROW_FLAME, power, beam); break;
+        case 1: zapping(ZAP_PAIN,  power, beam); break;
+        case 2: zapping(ZAP_STONE_ARROW, power, beam); break;
+        case 3: zapping(ZAP_SHOCK, power, beam); break;
+        case 4: zapping(ZAP_BREATHE_ACID, power/2, beam); break;
         }
         break;
 
@@ -2485,6 +2535,8 @@ static bool _do_ability(const ability_def& abil)
         break;
 
     case ABIL_MAKHLEB_MAJOR_DESTRUCTION:
+        beam.range = 6;
+
         if (!spell_direction(spd, beam))
             return false;
 
@@ -2498,17 +2550,15 @@ static bool _do_ability(const ability_def& abil)
             return false;
 
         {
-            zap_type ztype = ZAP_DEBUGGING_RAY;
-            switch (random2(7))
-            {
-            case 0: beam.range =  7; ztype = ZAP_BOLT_OF_FIRE;       break;
-            case 1: beam.range =  6; ztype = ZAP_FIREBALL;           break;
-            case 2: beam.range =  8; ztype = ZAP_LIGHTNING_BOLT;     break;
-            case 3: beam.range =  5; ztype = ZAP_STICKY_FLAME;       break;
-            case 4: beam.range =  5; ztype = ZAP_IRON_SHOT;          break;
-            case 5: beam.range =  6; ztype = ZAP_BOLT_OF_DRAINING;   break;
-            case 6: beam.range =  8; ztype = ZAP_ORB_OF_ELECTRICITY; break;
-            }
+            zap_type ztype =
+                random_choose(ZAP_BOLT_OF_FIRE,
+                              ZAP_FIREBALL,
+                              ZAP_LIGHTNING_BOLT,
+                              ZAP_STICKY_FLAME,
+                              ZAP_IRON_SHOT,
+                              ZAP_BOLT_OF_DRAINING,
+                              ZAP_ORB_OF_ELECTRICITY,
+                              -1);
             zapping(ztype, power, beam);
         }
         break;
@@ -2818,6 +2868,22 @@ static bool _do_ability(const ability_def& abil)
 
     case ABIL_ASHENZARI_END_TRANSFER:
         ashenzari_end_transfer();
+        break;
+
+    case ABIL_DITHMENOS_SHADOW_STEP:
+        if (!dithmenos_shadow_step())
+        {
+            canned_msg(MSG_OK);
+            return false;
+        }
+        break;
+
+    case ABIL_DITHMENOS_SHADOW_FORM:
+        if (!transform(you.skill(SK_INVOCATIONS, 2), TRAN_SHADOW))
+        {
+            crawl_state.zero_turns_taken();
+            return false;
+        }
         break;
 
     case ABIL_RENOUNCE_RELIGION:
@@ -3558,7 +3624,7 @@ static int _find_ability_slot(const ability_def &abil)
     return -1;
 }
 
-vector<ability_type> get_god_abilities(bool include_unusable)
+vector<ability_type> get_god_abilities(bool include_unusable, bool ignore_piety)
 {
     vector<ability_type> abilities;
     if (you_worship(GOD_TROG) && (include_unusable || !silenced(you.pos())))
@@ -3584,7 +3650,7 @@ vector<ability_type> get_god_abilities(bool include_unusable)
 
     for (int i = 0; i < MAX_GOD_ABILITIES; ++i)
     {
-        if (you.piety < piety_breakpoint(i))
+        if (you.piety < piety_breakpoint(i) && !ignore_piety)
             continue;
 
         const ability_type abil =
@@ -3617,20 +3683,6 @@ vector<ability_type> get_god_abilities(bool include_unusable)
     }
 
     return abilities;
-}
-
-void gain_god_ability(int i)
-{
-    you.start_train.insert(abil_skill(god_abilities[you.religion][i]));
-    if (god_abilities[you.religion][i] == ABIL_TSO_DIVINE_SHIELD)
-        you.start_train.insert(SK_SHIELDS);
-}
-
-void lose_god_ability(int i)
-{
-    you.stop_train.insert(abil_skill(god_abilities[you.religion][i]));
-    if (god_abilities[you.religion][i] == ABIL_TSO_DIVINE_SHIELD)
-        you.stop_train.insert(SK_SHIELDS);
 }
 
 ////////////////////////////////////////////////////////////////////////

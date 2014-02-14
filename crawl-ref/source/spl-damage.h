@@ -11,7 +11,8 @@ spret_type cast_delayed_fireball(bool fail);
 void setup_fire_storm(const actor *source, int pow, bolt &beam);
 spret_type cast_fire_storm(int pow, bolt &beam, bool fail);
 bool cast_hellfire_burst(int pow, bolt &beam);
-spret_type cast_chain_lightning(int pow, const actor *caster, bool fail = false);
+spret_type cast_chain_spell(spell_type spell_cast, int pow,
+                            const actor *caster, bool fail = false);
 
 spret_type cast_los_attack_spell(spell_type spell, int pow, actor* agent,
                                  bool actual, bool added_effects = true,
@@ -23,7 +24,10 @@ spret_type vampiric_drain(int pow, monster* mons, bool fail);
 spret_type cast_freeze(int pow, monster* mons, bool fail);
 spret_type cast_airstrike(int pow, const dist &beam, bool fail);
 spret_type cast_shatter(int pow, bool fail);
-spret_type cast_ignite_poison(int pow, bool fail);
+bool ignite_poison_affects(const actor* act);
+spret_type cast_ignite_poison(actor *agent, int pow, bool fail, bool mon_tracer = false);
+void local_ignite_poison(coord_def pos, int pow, actor* agent);
+int discharge_monsters(coord_def where, int pow, int, actor *agent);
 spret_type cast_discharge(int pow, bool fail);
 int disperse_monsters(coord_def where, int pow);
 spret_type cast_dispersal(int pow, bool fail = false);
@@ -48,7 +52,8 @@ void forest_message(const coord_def pos, const string &msg,
                     msg_channel_type ch = MSGCH_PLAIN);
 void forest_damage(const actor *mon);
 
-vector<bolt> get_spray_rays(const actor *caster, coord_def aim, int range, int max_rays);
+vector<bolt> get_spray_rays(const actor *caster, coord_def aim, int range,
+                            int max_rays, int max_spacing = 3);
 spret_type cast_dazzling_spray(actor *caster, int pow, coord_def aim,
                                bool fail = false);
 

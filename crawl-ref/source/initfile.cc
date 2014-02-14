@@ -1,6 +1,12 @@
 /**
  * @file
  * @brief Simple reading of an init file and system variables
+ * @detailed read_init_file is the main function, but read_option_line does
+ * most of the work though. Read through read_init_file to get an overview of
+ * how Crawl loads options. This file also contains a large number of utility
+ * functions for setting particular options and converting between human
+ * readable strings and internal values. (E.g. str_to_enemy_hp_colour,
+ * _weapon_to_str). There is also some code dealing with sorting menus.
 **/
 
 #include "AppHdr.h"
@@ -778,10 +784,11 @@ void game_options::reset_options()
     autopickups.set(OBJ_JEWELLERY);
     autopickups.set(OBJ_WANDS);
     autopickups.set(OBJ_FOOD);
+    autopickups.set(OBJ_RODS);
     auto_switch             = false;
     suppress_startup_errors = false;
 
-    show_inventory_weights = false;
+    show_inventory_weights = true;
     clean_map              = false;
     show_uncursed          = true;
     easy_open              = true;
@@ -807,6 +814,7 @@ void game_options::reset_options()
     note_skill_max         = true;
     note_xom_effects       = true;
     note_chat_messages     = false;
+    note_dgl_messages      = true;
     note_hp_percent        = 5;
 
     // [ds] Grumble grumble.
@@ -907,8 +915,8 @@ void game_options::reset_options()
     dump_item_origin_price = -1;
     dump_book_spells       = true;
 
-    drop_mode              = DM_MULTI;
     pickup_menu            = true;
+    pickup_menu_limit      = 4;
 
     flush_input[ FLUSH_ON_FAILURE ]     = true;
     flush_input[ FLUSH_BEFORE_COMMAND ] = false;
@@ -927,6 +935,7 @@ void game_options::reset_options()
 
 #ifdef WIZARD
     fsim_rounds = 4000L;
+    fsim_csv    = false;
     fsim_mons   = "";
     fsim_scale.clear();
     fsim_kit.clear();
@@ -1043,12 +1052,20 @@ void game_options::reset_options()
     tile_show_minihealthbar  = true;
     tile_show_minimagicbar   = true;
     tile_show_demon_tier     = true;
+#ifdef USE_TILE_WEB
+    // disabled by default due to performance issues
+    tile_water_anim          = false;
+#else
     tile_water_anim          = true;
+#endif
+    tile_misc_anim           = true;
 #endif
 
 #ifdef USE_TILE_WEB
     tile_realtime_anim = false;
     tile_display_mode = "tiles";
+    tile_level_map_hide_messages = true;
+    tile_level_map_hide_sidebar = false;
 #endif
 
     // map each colour to itself as default
@@ -1432,6 +1449,7 @@ string read_init_file(bool runscript)
 {
     Options.reset_options();
 
+    // Load Lua builtins.
 #ifdef CLUA_BINDINGS
     if (runscript)
     {
@@ -1443,6 +1461,7 @@ string read_init_file(bool runscript)
         }
     }
 
+    // Load default options.
     for (unsigned int i = 0; i < ARRAYSZ(config_defaults); ++i)
         Options.include(datafile_path(config_defaults[i]), false, runscript);
 #else
@@ -1450,6 +1469,7 @@ string read_init_file(bool runscript)
     UNUSED(config_defaults);
 #endif
 
+    // Load early binding extra options from the command line BEFORE init.txt.
     Options.filename     = "extra opts first";
     Options.basefilename = "extra opts first";
     Options.line_num     = 0;
@@ -1459,6 +1479,7 @@ string read_init_file(bool runscript)
         Options.read_option_line(SysEnv.extra_opts_first[i], true);
     }
 
+    // Load init.txt.
     const string init_file_name(_find_crawlrc());
 
     FileLineInput f(init_file_name.c_str());
@@ -1486,6 +1507,7 @@ string read_init_file(bool runscript)
 #endif
     Options.read_options(f, runscript);
 
+    // Load late binding extra options from the command line AFTER init.txt.
     Options.filename     = "extra opts last";
     Options.basefilename = "extra opts last";
     Options.line_num     = 0;
@@ -1870,6 +1892,14 @@ int game_options::read_explore_stop_conditions(const string &field) const
     return conditions;
 }
 
+// Note the distinction between:
+// 1. aliases "ae := autopickup_exception" "ae += useless_item"
+//    stored in game_options.aliases.
+// 2. variables "$slots := abc" "spell_slots += Dispel undead:$slots"
+//    stored in game_options.variables.
+// 3. constant variables "$slots = abc", "constant = slots".
+//    stored in game_options.variables, but with an extra entry in
+//    game_options.constants.
 void game_options::add_alias(const string &key, const string &val)
 {
     if (key[0] == '$')
@@ -2670,6 +2700,7 @@ void game_options::read_option_line(const string &str, bool runscript)
     else BOOL_OPTION(note_skill_max);
     else BOOL_OPTION(note_xom_effects);
     else BOOL_OPTION(note_chat_messages);
+    else BOOL_OPTION(note_dgl_messages);
     else BOOL_OPTION(clear_messages);
     else BOOL_OPTION(show_more);
     else BOOL_OPTION(small_more);
@@ -3028,6 +3059,7 @@ void game_options::read_option_line(const string &str, bool runscript)
 #ifdef WIZARD
     else if (key == "fsim_mode")
         fsim_mode = field;
+    else BOOL_OPTION(fsim_csv);
     else LIST_OPTION(fsim_scale);
     else LIST_OPTION(fsim_kit);
     else if (key == "fsim_rounds")
@@ -3377,14 +3409,8 @@ void game_options::read_option_line(const string &str, bool runscript)
     }
     else if (key == "darken_beyond_range")
         darken_beyond_range = _read_bool(field, darken_beyond_range);
-    else if (key == "drop_mode")
-    {
-        if (field.find("multi") != string::npos)
-            drop_mode = DM_MULTI;
-        else
-            drop_mode = DM_SINGLE;
-    }
     else BOOL_OPTION(pickup_menu);
+    else INT_OPTION(pickup_menu_limit, INT_MIN, INT_MAX);
     else if (key == "additional_macro_file")
     {
         // TODO: this option could probably be improved.  For now, keep the
@@ -3494,6 +3520,7 @@ void game_options::read_option_line(const string &str, bool runscript)
     else BOOL_OPTION(tile_show_minimagicbar);
     else BOOL_OPTION(tile_show_demon_tier);
     else BOOL_OPTION(tile_water_anim);
+    else BOOL_OPTION(tile_misc_anim);
     else LIST_OPTION(tile_layout_priority);
     else if (key == "tile_tag_pref")
         tile_tag_pref = _str_to_tag_pref(field.c_str());
@@ -3505,6 +3532,8 @@ void game_options::read_option_line(const string &str, bool runscript)
         if (field == "tiles" || field == "glyphs" || field == "hybrid")
             tile_display_mode = field;
     }
+    else BOOL_OPTION(tile_level_map_hide_messages);
+    else BOOL_OPTION(tile_level_map_hide_sidebar);
 #endif
 
     else if (key == "bindkey")
@@ -4152,7 +4181,13 @@ void game_options::write_webtiles_options(const string& name)
     tiles.json_write_string("tile_display_mode", Options.tile_display_mode);
     tiles.json_write_int("tile_cell_pixels", Options.tile_cell_pixels);
     tiles.json_write_bool("tile_filter_scaling", Options.tile_filter_scaling);
+    tiles.json_write_bool("tile_water_anim", Options.tile_water_anim);
+    tiles.json_write_bool("tile_misc_anim", Options.tile_misc_anim);
     tiles.json_write_bool("tile_realtime_anim", Options.tile_realtime_anim);
+    tiles.json_write_bool("tile_level_map_hide_messages",
+            Options.tile_level_map_hide_messages);
+    tiles.json_write_bool("tile_level_map_hide_sidebar",
+            Options.tile_level_map_hide_sidebar);
 
     tiles.json_write_int("tile_font_crt_size", Options.tile_font_crt_size);
     tiles.json_write_int("tile_font_stat_size", Options.tile_font_stat_size);

@@ -144,6 +144,42 @@
   "cold resistance"
 },
 
+{ MUT_HEAT_VULNERABILITY,             0,  3, true, false,  true,
+  "heat vulnerability",
+
+  {"You are vulnerable to heat.",
+   "You are very vulnerable to heat.",
+   "You are extremely vulnerable to heat."},
+
+  {"You feel hot for a moment.",
+   "You feel hot for a moment.",
+   "You feel hot for a moment."},
+
+  {"You feel a sudden chill.",
+   "You feel a sudden chill.",
+   "You feel a sudden chill."},
+
+  "heat vulnerability"
+},
+
+{ MUT_COLD_VULNERABILITY,             0,  3, true, false,  true,
+  "cold vulnerability",
+
+  {"You are vulnerable to cold.",
+   "You are very vulnerable to cold.",
+   "You are extremely vulnerable to cold."},
+
+  {"You feel a sudden chill.",
+   "You feel a sudden chill.",
+   "You feel a sudden chill."},
+
+  {"You feel hot for a moment.",
+   "You feel hot for a moment.",
+   "You feel hot for a moment."},
+
+  "cold vulnerability"
+},
+
 { MUT_DEMONIC_GUARDIAN,               0,  3, false, false, false,
   "demonic guardian",
 
@@ -812,7 +848,7 @@
 
 // Octopode only
 { MUT_TENTACLE_SPIKE,                10,  3, false,  true,  true,
-  "spike",
+  "tentacle spike",
 
   {"One of your tentacles bears a spike.",
    "One of your tentacles bears a nasty spike.",
@@ -1247,6 +1283,26 @@
   "acidic bite"
 },
 
+{ MUT_ANTIMAGIC_BITE,                 0,  1, false,  true,  true,
+  "antimagic bite",
+
+  {"Your bite disrupts and absorbs the magic of your enemies.", "", ""},
+  {"You feel a sudden thirst for magic.", "", ""},
+  {"Your magical appetite wanes.", "", ""},
+
+  "antimagic bite"
+},
+
+{ MUT_NO_DEVICE_HEAL,                 0,  1, true,  false,  false,
+  "no device heal",
+
+  {"Potions and wands cannot restore your HP.", "", ""},
+  {"Your system rejects artificial healing.", "", ""},
+  {"Your system accepts artificial healing.", "", ""},
+
+  "no device heal"
+},
+
 // Scale mutations
 { MUT_DISTORTION_FIELD,               2,  3, false, false, false,
   "repulsion field",
@@ -1501,7 +1557,7 @@
 },
 
 { MUT_JELLY_GROWTH,                       0,  1, false,  true, true,
-  "a jelly is attached to you",
+  "jelly sensing items",
 
   {"You have a small jelly attached to you that senses nearby items.", "", ""},
   {"Your body partially splits into a small jelly.", "", ""},
@@ -1511,7 +1567,7 @@
 },
 
 { MUT_JELLY_MISSILE,                       0,  1, false,  true, true,
-  "absorbing missiles",
+  "jelly absorbing missiles",
 
   {"You have a small jelly attached to you that may absorb incoming projectiles.", "", ""},
   {"Your body partially splits into a small jelly.", "", ""},
@@ -1555,8 +1611,8 @@
 { MUT_EXOSKELETON,                         0,  2, false,  true,  true,
   "exoskeleton",
 
-  {"Your body is surrounded by an exoskeleton. (HP +5, AC +1)",
-   "Your body is surrounded by a tough exoskeleton. (HP +20, AC +2)",
+  {"Your body is surrounded by an exoskeleton. (AC +1)",
+   "Your body is surrounded by a tough exoskeleton. (AC +4)",
    ""},
 
   {"Your exoskeleton hardens.",
@@ -1570,6 +1626,7 @@
   "exoskeleton"
 },
 
+#if TAG_MAJOR_VERSION == 34
 { MUT_FUMES,            0,  2, false, false, false,
   "fuming",
 
@@ -1578,4 +1635,15 @@
   {"You stop fuming.", "You fume less.", ""},
 
   "fumes"
+},
+#endif
+
+{ MUT_BLACK_MARK,                  0,  1, false, false, false,
+  "black mark",
+
+  {"Your melee attacks sometimes drain vitality from your foes.", "", ""},
+  {"An ominous black mark forms on your body.", "", ""},
+  {"", "", ""},
+
+  "black mark"
 }

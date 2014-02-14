@@ -997,7 +997,8 @@ LROCKTILE:  wall_hall
 # No ash or beogh, although both gods are still allowed (just harder to get).
 # Both would be rather useless if you picked them, though. Positions are random,
 # and you don't have enough time to reach an altar before the game starts.
-NSUBST: B = 0 / 1 / 2 / 3 / 4 / 5 / 6 / 7 / 8 / 9 / h / i / j / k / l / n
+NSUBST: B = 0 / 1 / 2 / 3 / 4 / 5 / 6 / 7 / 8 / 9 / h / i / j / k / l / n / \
+            o / *:.
 KFEAT:  0 = altar_zin
 KFEAT:  1 = altar_the_shining_one
 KFEAT:  2 = altar_lugonu
@@ -1014,6 +1015,7 @@ KFEAT:  j = altar_elyvilon
 KFEAT:  k = altar_cheibriados
 KFEAT:  l = altar_jiyva
 KFEAT:  n = altar_fedhas
+KFEAT:  o = altar_dithmenos
 KITEM:  { = scroll of blinking q:3, scroll of fog q:3 ident:all, \
             potion of heal wounds q:3, potion of speed q:3, \
             wand of fire charges:5 ident:all, \
@@ -1063,10 +1065,9 @@ KFEAT:  I = antiques shop type:Jewellery count:17 greed:9 ; \
             any jewellery randart
 KFEAT:  K = antique armour shop count:17 use_all type:Advanced suffix:Armour greed:35 ; \
             pair of gloves randart | pair of gloves randart | pair of boots randart |\
-            pair of boots randart | helmet randart | cap randart | buckler randart |\
+            pair of boots randart | helmet randart | hat randart | buckler randart |\
             shield randart | cloak randart | cloak randart | robe randart | animal skin randart |\
-            large shield randart | robe randart | buckler randart | wizard hat randart |\
-            leather armour randart
+            large shield randart | robe randart | buckler randart | leather armour randart
 KFEAT:  L = armour shop count:17 greed:12 type:Basic suffix:Armour use_all ; \
             mundane not_cursed storm dragon armour | mundane not_cursed fire dragon armour |\
             mundane not_cursed ice dragon armour | mundane not_cursed gold dragon armour |\
@@ -1123,11 +1124,11 @@ XXXXXXXXXXXXccP.....DccXXXXXXXXXXXX
 XXXXXXXXXXXXcE.......NcXXXXXXXXXXXX
 XXXXXXXXXXXXcB.......BcXXXXXXXXXXXX
 XXXXXXXXXXXXcB.......BcXXXXXXXXXXXX
-XXXXXXXXXXXcc.........cXXXXXXXXXXXX
+XXXXXXXXXXXccB.......BcXXXXXXXXXXXX
 XXXXXXXXXXccc.........cccXXXXXXXXXX
 XXXXXXXXXXcY...........ZcXXXXXXXXXX
 XXXXXcccccc.G.........G.ccccccXXXXX
-XXXXccMBB.......xxx.......BBFccXXXX
+XXXXccMBBB......xxx......BBBFccXXXX
 XXcccI........G.xxx.G........ScccXX
 Xcc.............xxx.............ccX
 XcW..........xxx...xxx..........UcX
@@ -1135,11 +1136,11 @@ XcW..........xxx.{.xxx..........UcX
 XcW..........xxx...xxx..........UcX
 Xcc.............xxx.............ccX
 XXcccK........G.xxx.G........HcccXX
-XXXXccCBB.......xxx.......BBOccXXXX
+XXXXccCBBB......xxx......BBBOccXXXX
 XXXXXcccccc.G.........G.ccccccXXXXX
 XXXXXXXXXXc!...........?cXXXXXXXXXX
 XXXXXXXXXXccc.........cccXXXXXXXXXX
-XXXXXXXXXXXXc.........cXXXXXXXXXXXX
+XXXXXXXXXXXXcB.......BcXXXXXXXXXXXX
 XXXXXXXXXXXXcB.......BcXXXXXXXXXXXX
 XXXXXXXXXXXXcB.......BcXXXXXXXXXXXX
 XXXXXXXXXXXXcR.......QcXXXXXXXXXXXX

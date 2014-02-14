@@ -60,7 +60,7 @@ static bool _confirm_pray_sacrifice(god_type god)
 
 string god_prayer_reaction()
 {
-    string result = god_name(you.religion);
+    string result = uppercase_first(god_name(you.religion));
     if (crawl_state.player_is_dead())
         result += " was ";
     else
@@ -487,10 +487,10 @@ static bool _zin_donate_gold()
 
 static int _leading_sacrifice_group()
 {
-    int weights[5];
+    int weights[4];
     get_pure_deck_weights(weights);
     int best_i = -1, maxweight = -1;
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < 4; ++i)
     {
         if (best_i == -1 || weights[i] > maxweight)
         {
@@ -503,10 +503,10 @@ static int _leading_sacrifice_group()
 
 static void _give_sac_group_feedback(int which)
 {
-    ASSERT_RANGE(which, 0, 5);
+    ASSERT_RANGE(which, 0, 4);
     const char* names[] =
     {
-        "Escape", "Destruction", "Dungeons", "Summoning", "Wonder",
+        "Escape", "Destruction", "Summoning", "Wonder",
     };
     mprf(MSGCH_GOD, "A symbol of %s coalesces before you, then vanishes.",
          names[which]);
@@ -780,12 +780,10 @@ bool check_nemelex_sacrificing_item_type(const item_def& item)
     // else fall through
     case OBJ_WANDS:
     case OBJ_SCROLLS:
-        return you.nemelex_sacrificing[NEM_GIFT_WONDERS];
-
     case OBJ_JEWELLERY:
     case OBJ_BOOKS:
     case OBJ_MISCELLANY:
-        return you.nemelex_sacrificing[NEM_GIFT_DUNGEONS];
+        return you.nemelex_sacrificing[NEM_GIFT_WONDERS];
 
     default:
         return false;
@@ -844,7 +842,8 @@ static bool _offer_items()
         }
 
         if (god_likes_item(you.religion, item)
-            && (item.inscription.find("=p") != string::npos))
+            && ((item.inscription.find("=p") != string::npos)
+                || item_needs_autopickup(item)))
         {
             const string msg = "Really sacrifice " + item.name(DESC_A) + "?";
 
@@ -882,8 +881,6 @@ static bool _offer_items()
             simple_god_message(" wants the Orb's power used on the surface!");
         else if (item_is_rune(*disliked_item))
             simple_god_message(" wants the runes to be proudly displayed.");
-        else if (item_is_horn_of_geryon(*disliked_item))
-            simple_god_message(" doesn't want your path blocked.");
         // Zin was handled above, and the other gods don't care about
         // sacrifices.
         else if (god_likes_fresh_corpses(you.religion))

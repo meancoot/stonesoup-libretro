@@ -117,7 +117,7 @@ bool monster_habitable_grid(const monster* mon,
                                   actual_grid,
                                   DNGN_UNSEEN,
                                   mons_flies(mon),
-                                  mon->cannot_move());
+                                  mon->cannot_move() || mon->caught());
 }
 
 bool mons_airborne(monster_type mcls, int flies, bool paralysed)
@@ -406,11 +406,9 @@ void spawn_random_monsters()
     }
 
     mgen_data mg(WANDERING_MONSTER);
-    if (player_in_branch(BRANCH_ABYSS) && one_chance_in(3))
-        mg.place = abyssal_state.level;
-    else if (player_in_branch(BRANCH_PANDEMONIUM)
-             && !env.properties.exists("vault_mon_weights")
-             && !one_chance_in(40))
+    if (player_in_branch(BRANCH_PANDEMONIUM)
+        && !env.properties.exists("vault_mon_weights")
+        && !one_chance_in(40))
     {
         mg.cls = env.mons_alloc[random2(PAN_MONS_ALLOC)];
         mg.flags |= MG_PERMIT_BANDS;
@@ -551,11 +549,14 @@ static bool _find_mon_place_near_stairs(coord_def& pos,
     return in_bounds(pos);
 }
 
-static bool _needs_resolution(monster_type mon_type)
+bool needs_resolution(monster_type mon_type)
 {
     return mon_type == RANDOM_DRACONIAN || mon_type == RANDOM_BASE_DRACONIAN
            || mon_type == RANDOM_NONBASE_DRACONIAN
            || mon_type >= RANDOM_DEMON_LESSER && mon_type <= RANDOM_DEMON
+           || mon_type == RANDOM_DEMONSPAWN
+           || mon_type == RANDOM_BASE_DEMONSPAWN
+           || mon_type == RANDOM_NONBASE_DEMONSPAWN
            || _is_random_monster(mon_type);
 }
 
@@ -596,6 +597,28 @@ static monster_type _resolve_monster_type(monster_type mon_type,
     }
     else if (mon_type >= RANDOM_DEMON_LESSER && mon_type <= RANDOM_DEMON)
         mon_type = summon_any_demon(mon_type);
+    else if (mon_type == RANDOM_DEMONSPAWN)
+    {
+        do
+        {
+            mon_type =
+                static_cast<monster_type>(
+                    random_range(MONS_FIRST_DEMONSPAWN,
+                                 MONS_LAST_DEMONSPAWN));
+        }
+        while (base_type != MONS_PROGRAM_BUG
+               && mon_type != base_type
+               && mons_species(mon_type) == mon_type);
+    }
+    else if (mon_type == RANDOM_BASE_DEMONSPAWN)
+        mon_type = random_demonspawn_monster_species();
+    else if (mon_type == RANDOM_NONBASE_DEMONSPAWN)
+    {
+        mon_type =
+            static_cast<monster_type>(
+                random_range(MONS_FIRST_NONBASE_DEMONSPAWN,
+                             MONS_LAST_NONBASE_DEMONSPAWN));
+    }
 
     // (2) Take care of non-draconian random monsters.
     else if (_is_random_monster(mon_type))
@@ -637,7 +660,7 @@ static monster_type _resolve_monster_type(monster_type mon_type,
                 mon_type  = (monster_type) type;
                 if (want_band)
                     *want_band = banded;
-                if (_needs_resolution(mon_type))
+                if (needs_resolution(mon_type))
                 {
                     mon_type =
                         _resolve_monster_type(mon_type, proximity,
@@ -1338,6 +1361,9 @@ static monster* _place_monster_aux(const mgen_data &mg, const monster *leader,
         // Wiglaf belongs to Okawaru.
         else if (mg.cls == MONS_WIGLAF)
             mon->god = GOD_OKAWARU;
+        // Asterion belongs to Mahkleb.
+        else if (mg.cls == MONS_ASTERION)
+            mon->god = GOD_MAKHLEB;
         else
         {
             switch (mons_genus(mg.cls))
@@ -1411,12 +1437,26 @@ static monster* _place_monster_aux(const mgen_data &mg, const monster *leader,
 
     if (mg.hd != 0)
     {
+        int bonus1 = 0, bonus2 = 0, bonus3 = 0;
+        if (mons_is_demonspawn(mg.cls)
+            && mg.cls != MONS_DEMONSPAWN
+            && mons_species(mg.cls) == MONS_DEMONSPAWN)
+        {
+            // Nonbase demonspawn get bonuses from their base type.
+            const monsterentry *mbase =
+                get_monster_data(draco_or_demonspawn_subspecies(mon));
+            bonus1 = mbase->hpdice[1];
+            bonus2 = mbase->hpdice[2];
+            bonus3 = mbase->hpdice[3];
+        }
         mon->hit_dice = mg.hd;
         // Re-roll HP.
-        int hp = hit_points(mg.hd, m_ent->hpdice[1], m_ent->hpdice[2]);
+        int hp = hit_points(mg.hd, m_ent->hpdice[1] + bonus1,
+                                   m_ent->hpdice[2] + bonus2);
         // But only for monsters with random HP.
         if (hp > 0)
         {
+            hp += m_ent->hpdice[3] + bonus3;
             mon->max_hit_points = hp;
             mon->hit_points = hp;
         }
@@ -1466,12 +1506,28 @@ static monster* _place_monster_aux(const mgen_data &mg, const monster *leader,
     }
     else if (mg.cls == MONS_HYPERACTIVE_BALLISTOMYCETE)
         mon->add_ench(ENCH_EXPLODING);
+    else if (mons_is_demonspawn(mon->type)
+             && draco_or_demonspawn_subspecies(mon) == MONS_GELID_DEMONSPAWN)
+    {
+        mon->add_ench(ENCH_ICEMAIL);
+    }
 
     if (mg.cls == MONS_TWISTER || mg.cls == MONS_DIAMOND_OBELISK)
     {
         mon->props["tornado_since"].get_int() = you.elapsed_time;
         mon->add_ench(mon_enchant(ENCH_TORNADO, 0, 0, INFINITE_DURATION));
     }
+
+    if (mons_class_flag(mg.cls, M_OZOCUBUS_ARMOUR))
+    {
+        const int power = (mon->spell_hd(SPELL_OZOCUBUS_ARMOUR) * 15) / 10;
+        mon->add_ench(mon_enchant(ENCH_OZOCUBUS_ARMOUR,
+                                  20 + random2(power) + random2(power),
+                                  mon));
+    }
+
+    if (mons_class_flag(mg.cls, M_SHROUD))
+        mon->add_ench(ENCH_SHROUD);
 
     mon->flags |= MF_JUST_SUMMONED;
 
@@ -1723,10 +1779,6 @@ static monster* _place_monster_aux(const mgen_data &mg, const monster *leader,
     {
         if (mg.flags & MG_DONT_COME)
             mon->seen_context = SC_JUST_SEEN;
-        // FIXME: This causes "comes into view" messages at the
-        //        wrong time, since code checks for placement
-        //        success before printing messages.
-        handle_seen_interrupt(mon);
     }
 
     // Area effects can produce additional messages, and thus need to be
@@ -1788,8 +1840,14 @@ static bool _good_zombie(monster_type base, monster_type cs,
 // Veto for the zombie picker class
 bool zombie_picker::veto(monster_type mt)
 {
+    monster_type corpse_type = mons_species(mt);
+
+    // XXX: nonbase draconian leave base draconian corpses.
+    if (mt != MONS_DRACONIAN && corpse_type == MONS_DRACONIAN)
+        corpse_type = random_draconian_monster_species();
+
     // Zombifiability in general.
-    if (mons_species(mt) != mt)
+    if (!mons_class_can_leave_corpse(corpse_type))
         return true;
     // Monsters that don't really exist
     if (mons_class_flag(mt, M_UNFINISHED))
@@ -1797,12 +1855,12 @@ bool zombie_picker::veto(monster_type mt)
     // Monsters that can have derived undead, but never randomly generated.
     if (mons_class_flag(mt, M_NO_GEN_DERIVED))
         return true;
-    if (!mons_zombie_size(mt) || mons_is_unique(mt))
+    if (!mons_zombie_size(corpse_type) || mons_is_unique(mt))
         return true;
-    if (mons_class_holiness(mt) != MH_NATURAL)
+    if (mons_class_holiness(corpse_type) != MH_NATURAL)
         return true;
 
-    return !_good_zombie(mt, zombie_kind, pos);
+    return !_good_zombie(corpse_type, zombie_kind, pos);
 }
 
 monster_type pick_local_zombifiable_monster(level_id place,
@@ -1831,8 +1889,12 @@ monster_type pick_local_zombifiable_monster(level_id place,
 
     place.depth = max(1, min(place.depth, branch_ood_cap(place.branch)));
 
-    if (monster_type mt = pick_monster(place, picker))
+    if (monster_type mt =
+            picker.pick_with_veto(zombie_population(place.branch),
+                                  place.depth, MONS_0))
+    {
         return mt;
+    }
 
     return pick_monster_all_branches(place.absdepth(), picker);
 }
@@ -2159,7 +2221,7 @@ static band_type _choose_band(monster_type mon_type, int &band_size,
         break;
     case MONS_INSUBSTANTIAL_WISP:
         band = BAND_INSUBSTANTIAL_WISPS;
-        band_size = 4 + random2(5);
+        band_size = 3 + random2(4);
         break;
     case MONS_OGRE_MAGE:
         natural_leader = true;
@@ -2235,12 +2297,30 @@ static band_type _choose_band(monster_type mon_type, int &band_size,
 
     case MONS_GUARDIAN_SERPENT:
         band = BAND_GUARDIAN_SERPENT;
-        band_size = 2;
+        band_size = 2 + random2(4);
         break;
+
     case MONS_NAGA_MAGE:
     case MONS_NAGA_WARRIOR:
+        // Spawn alone more frequently at shallow depths
+        if (player_in_branch(BRANCH_SNAKE) && !x_chance_in_y(you.depth, 5))
+            break;
+
         band = BAND_NAGAS;
         band_size = 2 + random2(3);
+        break;
+
+    case MONS_NAGA_SHARPSHOOTER:
+        if (coinflip())
+        {
+            band = BAND_NAGA_SHARPSHOOTER;
+            band_size = 1 + random2(3);
+        }
+        break;
+
+    case MONS_NAGA_RITUALIST:
+        band = BAND_NAGA_RITUALIST;
+        band_size = 3 + random2(3);
         break;
 
     case MONS_WOLF:
@@ -2430,17 +2510,27 @@ static band_type _choose_band(monster_type mon_type, int &band_size,
 
     case MONS_MERFOLK_AQUAMANCER:
         band = BAND_MERFOLK_AQUAMANCER;
-        band_size = random_range(3, 6);
+        band_size = random_range(3, 4);
         break;
 
     case MONS_MERFOLK_JAVELINEER:
-        band = BAND_MERFOLK_JAVELINEER;
-        band_size = random_range(3, 5);
+        if (player_in_branch(BRANCH_DEPTHS))
+            break;
+        if (!player_in_branch(BRANCH_SHOALS) || x_chance_in_y(you.depth, 5))
+        {
+            band = BAND_MERFOLK_JAVELINEER;
+            band_size = random_range(2, 4);
+        }
         break;
 
     case MONS_MERFOLK_IMPALER:
-        band = BAND_MERFOLK_IMPALER;
-        band_size = random_range(3, 5);
+        if (player_in_branch(BRANCH_DEPTHS))
+            break;
+        if (!player_in_branch(BRANCH_SHOALS) || x_chance_in_y(you.depth, 5))
+        {
+            band = BAND_MERFOLK_IMPALER;
+            band_size = random_range(2, 4);
+        }
         break;
 
     case MONS_ELEPHANT:
@@ -2513,10 +2603,20 @@ static band_type _choose_band(monster_type mon_type, int &band_size,
         break;
 
     case MONS_SATYR:
-        natural_leader = true;
+        if (!one_chance_in(3))
+        {
+            natural_leader = true;
+            band = one_chance_in(5) ? BAND_FAUN_PARTY : BAND_FAUNS;
+            band_size = 3 + random2(2);
+        }
+        break;
+
     case MONS_FAUN:
-        band = BAND_FAUNS;
-        band_size = 2 + random2(3);
+        if (!one_chance_in(3))
+        {
+            band = coinflip() ? BAND_FAUNS : BAND_FAUN_PARTY;
+            band_size = 2 + random2(2);
+        }
         break;
 
     case MONS_TENGU_CONJURER:
@@ -2539,11 +2639,21 @@ static band_type _choose_band(monster_type mon_type, int &band_size,
         break;
 
     case MONS_SPRIGGAN_RIDER:
+        if (!one_chance_in(3))
+            break;
         band = BAND_SPRIGGAN_RIDERS;
-        band_size = random_range(2, 3);
+        band_size = random_range(1, 2);
         break;
 
     case MONS_SPRIGGAN_DRUID:
+        if (one_chance_in(3))
+        {
+            band = BAND_SPRIGGAN_DRUID;
+            natural_leader = true;
+            band_size = (one_chance_in(4) ? 3 : 2);
+        }
+        break;
+
     case MONS_SPRIGGAN_BERSERKER:
         if (one_chance_in(3))
             break;
@@ -2565,17 +2675,12 @@ static band_type _choose_band(monster_type mon_type, int &band_size,
         band_size = 6 + random2avg(5, 2);
         break;
 
-    case MONS_TREANT:
+    case MONS_SHAMBLING_MANGROVE:
         if (one_chance_in(4))
         {
-            band = BAND_SPRIGGAN_DRUID;
+            band = BAND_SPRIGGAN_RIDERS;
             band_size = 1;
         }
-        break;
-
-    case MONS_SPIRIT_WOLF:
-        band = BAND_SPIRIT_WOLVES;
-        band_size = random_range(0, 2);
         break;
 
     case MONS_VAMPIRE_KNIGHT:
@@ -2600,6 +2705,92 @@ static band_type _choose_band(monster_type mon_type, int &band_size,
         band_size = random_range(2, 3);
         break;
     }
+
+    case MONS_RAVEN:
+    {
+        band = BAND_RAVENS;
+        band_size = random_range(1, 2);
+        break;
+    }
+
+    // Don't give them a band in shallower places; one can be enough
+    case MONS_SALAMANDER:
+        if (player_in_branch(BRANCH_DEPTHS) && coinflip())
+        {
+            band = BAND_SALAMANDERS;
+            band_size = random_range(1, 2);
+        }
+        break;
+
+    case MONS_SALAMANDER_MYSTIC:
+        band = BAND_SALAMANDERS;
+        band_size = random_range(2, 3);
+        break;
+
+    case MONS_SALAMANDER_FIREBRAND:
+        if (coinflip())
+        {
+            band = BAND_SALAMANDER_ELITES;
+            band_size = random_range(3, 4);
+            break;
+        }
+        break;
+
+    case MONS_MONSTROUS_DEMONSPAWN:
+        band = BAND_MONSTROUS_DEMONSPAWN;
+        band_size = random2(4);
+        break;
+
+    case MONS_GELID_DEMONSPAWN:
+        band = BAND_GELID_DEMONSPAWN;
+        band_size = random2(4);
+        break;
+
+    case MONS_INFERNAL_DEMONSPAWN:
+        band = BAND_INFERNAL_DEMONSPAWN;
+        band_size = random2(4);
+        break;
+
+    case MONS_PUTRID_DEMONSPAWN:
+        band = BAND_PUTRID_DEMONSPAWN;
+        band_size = random2(4);
+        break;
+
+    case MONS_TORTUROUS_DEMONSPAWN:
+        band = BAND_TORTUROUS_DEMONSPAWN;
+        band_size = random2(4);
+        break;
+
+    case MONS_BLOOD_SAINT:
+        band = BAND_BLOOD_SAINT;
+        band_size = 1 + random2(4);
+        break;
+
+    case MONS_CHAOS_CHAMPION:
+        band = BAND_CHAOS_CHAMPION;
+        band_size = 1 + random2(3);
+        break;
+
+    case MONS_WARMONGER:
+        band = BAND_WARMONGER;
+        band_size = 2 + random2(3);
+        break;
+
+    case MONS_CORRUPTER:
+        band = BAND_CORRUPTER;
+        band_size = 1 + random2(4);
+        break;
+
+    case MONS_BLACK_SUN:
+        band = BAND_BLACK_SUN;
+        band_size = 2 + random2(3);
+        break;
+
+    case MONS_VASHNIA:
+        natural_leader = true;
+        band = BAND_VASHNIA;
+        band_size = 3 + random2(3);
+        break;
 
     default: ;
     }
@@ -2686,7 +2877,9 @@ static monster_type _band_member(band_type band, int which)
         return MONS_YAKTAUR;
 
     case BAND_INSUBSTANTIAL_WISPS:
-        return MONS_INSUBSTANTIAL_WISP;
+        return random_choose_weighted(8, MONS_INSUBSTANTIAL_WISP,
+                                      1, MONS_VAPOUR,
+                                      0);
 
     case BAND_POLYPHEMUS:
         if (which == 1)
@@ -2792,11 +2985,35 @@ static monster_type _band_member(band_type band, int which)
         break;
 
     case BAND_GUARDIAN_SERPENT:
-        return coinflip() ? MONS_NAGA_WARRIOR : MONS_NAGA_MAGE;
+        // Favor tougher naga suited to melee, compared to normal naga bands
+        if (which == 1 || which == 2 && coinflip())
+            return one_chance_in(3) ? MONS_NAGA_MAGE : MONS_NAGA_WARRIOR;
+        else
+            return one_chance_in(5) ? MONS_SALAMANDER : MONS_NAGA;
+
     case BAND_NAGAS:
-        if (which == 1 && coinflip())
-            return coinflip() ? MONS_NAGA_WARRIOR : MONS_NAGA_MAGE;
-        return MONS_NAGA;
+        if (which == 1 && coinflip() || which == 2 && one_chance_in(4))
+        {
+            return random_choose_weighted( 8, MONS_NAGA_WARRIOR,
+                                          11, MONS_NAGA_MAGE,
+                                           6, MONS_NAGA_RITUALIST,
+                                           8, MONS_NAGA_SHARPSHOOTER,
+                                           4, MONS_SALAMANDER_MYSTIC,
+                                           0);
+        }
+        else
+            return one_chance_in(7) ? MONS_SALAMANDER : MONS_NAGA;
+
+    case BAND_NAGA_RITUALIST:
+        return random_choose_weighted(15, MONS_BLACK_MAMBA,
+                                       7, MONS_MANA_VIPER,
+                                       5, MONS_WATER_MOCCASIN,
+                                       4, MONS_ANACONDA,
+                                       0);
+
+    case BAND_NAGA_SHARPSHOOTER:
+        return one_chance_in(3) ? MONS_NAGA_SHARPSHOOTER : MONS_NAGA;
+
     case BAND_WOLVES:
         return MONS_WOLF;
     case BAND_GREEN_RATS:
@@ -2811,7 +3028,7 @@ static monster_type _band_member(band_type band, int which)
                                       2, MONS_PLAGUE_SHAMBLER,
                                       0);
     case BAND_DEEP_TROLLS:
-        if (one_chance_in(3))
+        if (one_chance_in(4))
             return random_choose(MONS_DEEP_TROLL_EARTH_MAGE,
                                  MONS_DEEP_TROLL_SHAMAN,
                                  -1);
@@ -2876,8 +3093,8 @@ static monster_type _band_member(band_type band, int which)
         return MONS_SLAVE;
 
     case BAND_MERFOLK_AQUAMANCER:
-        return random_choose_weighted( 8, MONS_MERFOLK,
-                                      10, MONS_WATER_ELEMENTAL,
+        return random_choose_weighted( 4, MONS_MERFOLK,
+                                      11, MONS_WATER_ELEMENTAL,
                                        0);
 
     case BAND_MERFOLK_IMPALER:
@@ -2943,10 +3160,16 @@ static monster_type _band_member(band_type band, int which)
     case BAND_FAUNS:
         return MONS_FAUN;
 
+    case BAND_FAUN_PARTY:
+        if (which == 1)
+            return MONS_MERMAID;
+        else
+            return MONS_FAUN;
+
     case BAND_TENGU:
         if (which == 1 && coinflip())
             return coinflip() ? MONS_TENGU_WARRIOR : MONS_TENGU_CONJURER;
-        return MONS_TENGU;
+        return MONS_RAVEN;
 
     case BAND_SOJOBO:
         return MONS_TENGU_REAVER;
@@ -2983,13 +3206,10 @@ static monster_type _band_member(band_type band, int which)
         return MONS_AIR_ELEMENTAL;
 
     case BAND_SPRIGGAN_DRUID:
-        return MONS_SPRIGGAN_DRUID;
+        return one_chance_in(3) ? MONS_SPRIGGAN_RIDER : MONS_SPRIGGAN;
 
     case BAND_SPRIGGAN_RIDERS:
         return MONS_SPRIGGAN_RIDER;
-
-    case BAND_SPIRIT_WOLVES:
-        return MONS_SPIRIT_WOLF;
 
     case BAND_PHANTASMAL_WARRIORS:
         return MONS_PHANTASMAL_WARRIOR;
@@ -2999,6 +3219,137 @@ static monster_type _band_member(band_type band, int which)
 
     case BAND_RAIJU:
         return MONS_RAIJU;
+
+    case BAND_RAVENS:
+        return MONS_RAVEN;
+
+    case BAND_SALAMANDERS:
+        return MONS_SALAMANDER;
+
+    case BAND_SALAMANDER_ELITES:
+        if (which == 1 && coinflip())
+            return MONS_SALAMANDER_MYSTIC;
+        else
+            return MONS_SALAMANDER;
+
+    case BAND_MONSTROUS_DEMONSPAWN:
+        if (which == 1 || which == 2 && one_chance_in(5))
+        {
+            return random_choose_weighted( 2, MONS_DEMONIC_CRAWLER,
+                                           2, MONS_SIXFIRHY,
+                                           3, MONS_MONSTROUS_DEMONSPAWN,
+                                           0);
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_GELID_DEMONSPAWN:
+        if (which == 1 || which == 2 && one_chance_in(5))
+        {
+            return random_choose_weighted( 2, MONS_BLUE_DEVIL,
+                                           2, MONS_ICE_DEVIL,
+                                           3, MONS_GELID_DEMONSPAWN,
+                                           0);
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_INFERNAL_DEMONSPAWN:
+        if (which == 1 || which == 2 && one_chance_in(5))
+        {
+            return random_choose_weighted( 2, MONS_RED_DEVIL,
+                                           2, MONS_SUN_DEMON,
+                                           3, MONS_INFERNAL_DEMONSPAWN,
+                                           0);
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_PUTRID_DEMONSPAWN:
+        if (which == 1 || which == 2 && one_chance_in(5))
+            return random_choose_weighted( 2, MONS_HELLWING,
+                                           2, MONS_ORANGE_DEMON,
+                                           3, MONS_PUTRID_DEMONSPAWN,
+                                           0);
+        return random_demonspawn_monster_species();
+
+    case BAND_TORTUROUS_DEMONSPAWN:
+        if (which == 1 || which == 2 && one_chance_in(5))
+        {
+            return random_choose_weighted( 2, MONS_ROTTING_DEVIL,
+                                           2, MONS_SIXFIRHY,
+                                           3, MONS_TORTUROUS_DEMONSPAWN,
+                                           0);
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_BLOOD_SAINT:
+        if (which == 1 || which == 2 && one_chance_in(5))
+        {
+            if (x_chance_in_y(3, 5))
+                return coinflip() ? MONS_BALRUG : MONS_BLIZZARD_DEMON;
+            else
+                return static_cast<monster_type>(
+                    random_range(MONS_FIRST_NONBASE_DEMONSPAWN,
+                                 MONS_LAST_NONBASE_DEMONSPAWN));
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_CHAOS_CHAMPION:
+        if (which == 1 || which == 2 && one_chance_in(6))
+        {
+            if (x_chance_in_y(2, 5))
+                return one_chance_in(3) ? MONS_TORMENTOR : MONS_HELL_BEAST;
+            else
+            {
+                return static_cast<monster_type>(
+                    random_range(MONS_FIRST_NONBASE_DEMONSPAWN,
+                                 MONS_LAST_NONBASE_DEMONSPAWN));
+            }
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_WARMONGER:
+        if (which == 1 || which == 2 && one_chance_in(5))
+        {
+            if (x_chance_in_y(3, 5))
+                return one_chance_in(4) ? MONS_EXECUTIONER : MONS_REAPER;
+            else
+            {
+                return static_cast<monster_type>(
+                    random_range(MONS_FIRST_NONBASE_DEMONSPAWN,
+                                MONS_LAST_NONBASE_DEMONSPAWN));
+            }
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_CORRUPTER:
+        if (which == 1 || which == 2 && one_chance_in(5))
+        {
+            if (x_chance_in_y(3, 5))
+                return one_chance_in(4) ? MONS_CACODEMON : MONS_SHADOW_DEMON;
+            else
+            {
+                return static_cast<monster_type>(
+                    random_range(MONS_FIRST_NONBASE_DEMONSPAWN,
+                                 MONS_LAST_NONBASE_DEMONSPAWN));
+            }
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_BLACK_SUN:
+        if (which == 1 || which == 2 && one_chance_in(5))
+        {
+            if (x_chance_in_y(3, 5))
+                return one_chance_in(3) ? MONS_LOROCYPROCA : MONS_SOUL_EATER;
+            else
+            {
+                return static_cast<monster_type>(
+                    random_range(MONS_FIRST_NONBASE_DEMONSPAWN,
+                                 MONS_LAST_NONBASE_DEMONSPAWN));
+            }
+        }
+        return random_demonspawn_monster_species();
+
+    case BAND_VASHNIA:
+        return MONS_NAGA_SHARPSHOOTER;
 
     default:
         die("unhandled band type %d", band);
@@ -3155,6 +3506,9 @@ monster* mons_place(mgen_data mg)
 
         behaviour_event(creation, ME_EVAL);
     }
+
+    if (mg.flags & MG_AUTOFOE && creation->attitude == ATT_FRIENDLY)
+        set_nearest_monster_foe(creation, true);
 
     return creation;
 }

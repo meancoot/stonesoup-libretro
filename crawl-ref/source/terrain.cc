@@ -1629,7 +1629,7 @@ static const char *dngn_feature_names[] =
 "altar_okawaru", "altar_makhleb", "altar_sif_muna", "altar_trog",
 "altar_nemelex_xobeh", "altar_elyvilon", "altar_lugonu",
 "altar_beogh", "altar_jiyva", "altar_fedhas", "altar_cheibriados",
-"altar_ashenzari", "",
+"altar_ashenzari", "altar_dithmenos",
 
 "fountain_blue", "fountain_sparkling", "fountain_blood",
 #if TAG_MAJOR_VERSION == 34
@@ -1883,6 +1883,19 @@ bool is_boring_terrain(dungeon_feature_type feat)
     return false;
 }
 
+dungeon_feature_type orig_terrain(coord_def pos)
+{
+    const map_marker *mark = env.markers.find(pos, MAT_TERRAIN_CHANGE);
+    if (!mark)
+        return grd(pos);
+
+    const map_terrain_change_marker *terch
+        = dynamic_cast<const map_terrain_change_marker *>(mark);
+    ASSERTM(terch, "%s has incorrect class", mark->debug_describe().c_str());
+
+    return terch->old_feature;
+}
+
 void temp_change_terrain(coord_def pos, dungeon_feature_type newfeat, int dur,
                          terrain_change_type type, const monster* mon)
 {
@@ -1920,6 +1933,11 @@ void temp_change_terrain(coord_def pos, dungeon_feature_type newfeat, int dur,
                 old_feat = marker->old_feature;
         }
     }
+
+    // If we are trying to change terrain into what it already is, don't actually
+    // add another marker (unless the current terrain is due to some OTHER marker)
+    if (grd(pos) == newfeat && newfeat == old_feat)
+        return;
 
     map_terrain_change_marker *marker =
         new map_terrain_change_marker(pos, old_feat, newfeat, dur, type);
@@ -2005,6 +2023,19 @@ bool revert_terrain_change(coord_def pos, terrain_change_type ctype)
     }
     else
         return false;
+}
+
+bool is_temp_terrain(coord_def pos)
+{
+    vector<map_marker*> markers = env.markers.get_markers_at(pos);
+
+    for (int i = 0, size = markers.size(); i < size; ++i)
+    {
+        if (markers[i]->get_type() == MAT_TERRAIN_CHANGE)
+            return true;
+    }
+
+    return false;
 }
 
 bool plant_forbidden_at(const coord_def &p, bool connectivity_only)

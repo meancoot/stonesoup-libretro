@@ -19,6 +19,9 @@
 #define SW_TARGET_MID "sw_target_mid"
 #define SW_READIED "sw_readied"
 #define SW_TRACKING "sw_tracking"
+#define GA_TARGET_MID "ga_target_mid"
+#define GA_MELEE "ga_melee"
+#define GA_SPELL "ga_spell"
 
 spret_type cast_summon_butterflies(int pow, god_type god = GOD_NO_GOD,
                                    bool fail = false);
@@ -91,6 +94,7 @@ spret_type cast_mass_abjuration(int pow, bool fail = false);
 monster* find_battlesphere(const actor* agent);
 spret_type cast_battlesphere(actor* agent, int pow, god_type god, bool fail);
 void end_battlesphere(monster* mons, bool killed);
+bool battlesphere_can_mirror(spell_type spell);
 bool aim_battlesphere(actor* agent, spell_type spell, int powc, bolt& beam);
 bool trigger_battlesphere(actor* agent, bolt& beam);
 bool fire_battlesphere(monster* mons);
@@ -105,10 +109,16 @@ bool trigger_spectral_weapon(actor* agent, const actor* target);
 bool confirm_attack_spectral_weapon(monster* mons, const actor *defender);
 void reset_spectral_weapon(monster* mons);
 
+void grand_avatar_reset(monster* mons);
+bool grand_avatar_check_melee(monster* mons, actor* target);
+void trigger_grand_avatar(monster* mons, actor* victim, spell_type spell,
+                          const int old_hp);
+
 void summoned_monster(const monster* mons, const actor* caster,
                       spell_type spell);
 bool summons_are_capped(spell_type spell);
 int summons_limit(spell_type spell);
+int count_summons(const actor *summoner, spell_type spell);
 
 struct summons_desc // : public data_index_entry<spell_type>
 {

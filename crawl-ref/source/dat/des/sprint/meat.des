@@ -135,7 +135,7 @@
   -- This is the secret boss.
   local avatar =
     "slime creature hp:10000 hd:100 name:The_Unspeakable \
-    n_rpl col:jewel generate_awake perm_ench:haste \
+    n_rpl col:jewel tile:mons_unspeakable generate_awake perm_ench:haste \
     spells:shadow_creatures;shadow_creatures;shadow_creatures;airstrike;smiting;death's_door"
 
   function blood_monster_definitions(e)

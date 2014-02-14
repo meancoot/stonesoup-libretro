@@ -101,7 +101,7 @@ spret_type cast_summon_small_mammal(int pow, god_type god, bool fail)
             mgen_data(mon, BEH_FRIENDLY, &you,
                       3, SPELL_SUMMON_SMALL_MAMMAL,
                       you.pos(), MHITYOU,
-                      0, god)))
+                      MG_AUTOFOE, god)))
     {
         canned_msg(MSG_NOTHING_HAPPENS);
     }
@@ -170,7 +170,7 @@ spret_type cast_sticks_to_snakes(int pow, god_type god, bool fail)
 
             if (monster *snake = create_monster(mgen_data(mon, beha, &you,
                                       0, SPELL_STICKS_TO_SNAKES, you.pos(),
-                                      MHITYOU, 0, god), false))
+                                      MHITYOU, MG_AUTOFOE, god), false))
             {
                 count++;
                 snake->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, dur));
@@ -206,7 +206,7 @@ spret_type cast_summon_scorpions(int pow, god_type god, bool fail)
                           friendly ? BEH_FRIENDLY : BEH_HOSTILE, &you,
                           3, SPELL_SUMMON_SCORPIONS,
                           you.pos(), MHITYOU,
-                          0, god)))
+                          MG_AUTOFOE, god)))
         {
             success = true;
         }
@@ -252,7 +252,7 @@ spret_type cast_summon_swarm(int pow, god_type god, bool fail)
                           dur, SPELL_SUMMON_SWARM,
                           you.pos(),
                           MHITYOU,
-                          0, god)))
+                          MG_AUTOFOE, god)))
         {
             success = true;
         }
@@ -298,7 +298,7 @@ spret_type cast_call_canine_familiar(int pow, god_type god, bool fail)
                       dur, SPELL_CALL_CANINE_FAMILIAR,
                       you.pos(),
                       MHITYOU,
-                      0, god)))
+                      MG_AUTOFOE, god)))
     {
         canned_msg(MSG_NOTHING_HAPPENS);
     }
@@ -476,7 +476,7 @@ spret_type cast_summon_elemental(int pow, god_type god,
                       dur, SPELL_SUMMON_ELEMENTAL,
                       targ,
                       MHITYOU,
-                      0, god)))
+                      MG_AUTOFOE, god)))
     {
         canned_msg(MSG_NOTHING_HAPPENS);
         return SPRET_SUCCESS;
@@ -499,7 +499,7 @@ spret_type cast_summon_ice_beast(int pow, god_type god, bool fail)
             mgen_data(MONS_ICE_BEAST, BEH_FRIENDLY, &you,
                       dur, SPELL_SUMMON_ICE_BEAST,
                       you.pos(), MHITYOU,
-                      0, god)))
+                      MG_AUTOFOE, god)))
     {
         mpr("A chill wind blows around you.");
     }
@@ -527,7 +527,7 @@ spret_type cast_summon_ugly_thing(int pow, god_type god, bool fail)
                       dur, SPELL_SUMMON_UGLY_THING,
                       you.pos(),
                       MHITYOU,
-                      0, god)))
+                      MG_AUTOFOE, god)))
     {
         mpr((mon == MONS_VERY_UGLY_THING) ? "A very ugly thing appears."
                                           : "An ugly thing appears.");
@@ -560,7 +560,7 @@ spret_type cast_summon_hydra(actor *caster, int pow, god_type god, bool fail)
                       1, SPELL_SUMMON_HYDRA, caster->pos(),
                       (caster->is_player()) ?
                           MHITYOU : caster->as_monster()->foe,
-                      0, (god == GOD_NO_GOD) ? caster->deity() : god,
+                      MG_AUTOFOE, (god == GOD_NO_GOD) ? caster->deity() : god,
                       MONS_HYDRA, heads)))
     {
         if (you.see_cell(hydra->pos()))
@@ -626,7 +626,7 @@ spret_type cast_summon_dragon(actor *caster, int pow, god_type god, bool fail)
                           caster->pos(),
                           (caster->is_player()) ? MHITYOU
                             : caster->as_monster()->foe,
-                          0, god)))
+                          MG_AUTOFOE, god)))
         {
             if (you.see_cell(dragon->pos()))
                 mpr("A dragon appears.");
@@ -707,7 +707,7 @@ bool summon_berserker(int pow, actor *caster, monster_type override_mons)
                  caster ? caster->pos() : you.pos(),
                  (caster && caster->is_monster())
                      ? ((monster*)caster)->foe : MHITYOU,
-                 0, GOD_TROG);
+                 MG_AUTOFOE, GOD_TROG);
 
     if (!caster)
         mg.non_actor_summoner = "the rage of " + god_name(GOD_TROG, false);
@@ -729,7 +729,7 @@ bool summon_holy_warrior(int pow, bool punish)
                  punish ? 0 : &you,
                  punish ? 0 : min(2 + (random2(pow) / 4), 6),
                  0, you.pos(), MHITYOU,
-                 MG_FORCE_BEH, GOD_SHINING_ONE);
+                 MG_FORCE_BEH | MG_AUTOFOE, GOD_SHINING_ONE);
 
     if (punish)
     {
@@ -794,7 +794,7 @@ spret_type cast_tukimas_dance(int pow, god_type god, bool force_hostile,
                  dur, SPELL_TUKIMAS_DANCE,
                  you.pos(),
                  MHITYOU,
-                 0, god);
+                 MG_AUTOFOE, god);
     mg.props[TUKIMA_WEAPON] = cp;
     mg.props[TUKIMA_POWER] = pow;
 
@@ -889,7 +889,7 @@ spret_type cast_call_imp(int pow, god_type god, bool fail)
 
     if (monster *imp = create_monster(
             mgen_data(mon, BEH_FRIENDLY, &you, dur, SPELL_CALL_IMP,
-                      you.pos(), MHITYOU, MG_FORCE_BEH, god)))
+                      you.pos(), MHITYOU, MG_FORCE_BEH | MG_AUTOFOE, god)))
     {
         mpr((mon == MONS_WHITE_IMP)  ? "A beastly little devil appears in a puff of frigid air." :
             (mon == MONS_IRON_IMP)   ? "A metallic apparition takes form in the air." :
@@ -915,7 +915,7 @@ static bool _summon_demon_wrapper(int pow, god_type god, int spell,
             mgen_data(mon,
                       friendly ? BEH_FRIENDLY :
                           charmed ? BEH_CHARMED : BEH_HOSTILE, &you,
-                      dur, spell, you.pos(), MHITYOU, MG_FORCE_BEH, god)))
+                      dur, spell, you.pos(), MHITYOU, MG_FORCE_BEH | MG_AUTOFOE, god)))
     {
         success = true;
 
@@ -1045,7 +1045,7 @@ spret_type cast_shadow_creatures(bool scroll, god_type god, bool fail)
             mgen_data(critter, BEH_FRIENDLY, &you,
                       (scroll ? 2 : 1), // This duration is only used for band members.
                       SPELL_SHADOW_CREATURES, you.pos(), MHITYOU,
-                      MG_FORCE_BEH, god), false))
+                      MG_FORCE_BEH | MG_AUTOFOE, god), false))
         {
             // In the rare cases that a specific spell set of a monster will
             // cause anger, even if others do not, try rerolling
@@ -1153,7 +1153,7 @@ spret_type cast_malign_gateway(actor * caster, int pow, god_type god, bool fail)
     {
         fail_check();
 
-        const int malign_gateway_duration = BASELINE_DELAY * (random2(5) + 5);
+        const int malign_gateway_duration = BASELINE_DELAY * (random2(4) + 4);
         env.markers.add(new map_malign_gateway_marker(point,
                                 malign_gateway_duration,
                                 is_player,
@@ -1223,7 +1223,7 @@ spret_type cast_summon_horrible_things(int pow, god_type god, bool fail)
                mgen_data(MONS_ABOMINATION_LARGE, BEH_FRIENDLY, &you,
                          6, SPELL_SUMMON_HORRIBLE_THINGS,
                          you.pos(), MHITYOU,
-                         MG_FORCE_BEH, god)))
+                         MG_FORCE_BEH | MG_AUTOFOE, god)))
         {
             count++;
             player_angers_monster(mons);
@@ -1236,7 +1236,7 @@ spret_type cast_summon_horrible_things(int pow, god_type god, bool fail)
                mgen_data(MONS_TENTACLED_MONSTROSITY, BEH_FRIENDLY, &you,
                          6, SPELL_SUMMON_HORRIBLE_THINGS,
                          you.pos(), MHITYOU,
-                         MG_FORCE_BEH, god)))
+                         MG_FORCE_BEH | MG_AUTOFOE, god)))
         {
             count++;
             player_angers_monster(mons);
@@ -1490,7 +1490,8 @@ static bool _raise_remains(const coord_def &pos, int corps, beh_type beha,
 
     // Use the original monster type as the zombified type here, to get
     // the proper stats from it.
-    mgen_data mg(mon, beha, as, 0, 0, pos, hitting, MG_FORCE_BEH|MG_FORCE_PLACE,
+    mgen_data mg(mon, beha, as, 0, 0, pos, hitting,
+                 MG_FORCE_BEH|MG_FORCE_PLACE|MG_AUTOFOE,
                  god, monnum, number);
 
     // No experience for monsters animated by god wrath or the Sword of
@@ -1818,7 +1819,7 @@ spret_type cast_simulacrum(int pow, god_type god, bool fail)
     mgen_data mg(MONS_SIMULACRUM, BEH_FRIENDLY, &you,
                  0, SPELL_SIMULACRUM,
                  you.pos(), MHITYOU,
-                 MG_FORCE_BEH, god,
+                 MG_FORCE_BEH | MG_AUTOFOE, god,
                  flesh->sub_type == FOOD_CHUNK ?
                      static_cast<monster_type>(flesh->orig_monnum) :
                      sim_type);
@@ -2139,7 +2140,8 @@ bool twisted_resurrection(actor *caster, int pow, beh_type beha,
         else
             montype = MONS_CRAWLING_CORPSE;
 
-        mgen_data mg(montype, beha, caster, 0, 0, *ri, foe, MG_FORCE_BEH, god);
+        mgen_data mg(montype, beha, caster, 0, 0, *ri, foe,
+                     MG_FORCE_BEH | MG_AUTOFOE, god);
         if (monster *mons = create_monster(mg))
         {
             // Set hit dice, AC, and HP.
@@ -2458,6 +2460,8 @@ spret_type cast_battlesphere(actor* agent, int pow, god_type god, bool fail)
                 battlesphere->props["band_leader"].get_int() = agent->mid;
             }
             battlesphere->number = 4 + random2(pow + 10) / 10;
+            battlesphere->foe = agent->mindex();
+            battlesphere->target = agent->pos();
         }
         else if (agent->is_player() || you.can_see(agent))
             canned_msg(MSG_NOTHING_HAPPENS);
@@ -2482,7 +2486,7 @@ void end_battlesphere(monster* mons, bool killed)
         {
             if (you.can_see(mons))
             {
-                if ((mons->number == 0))
+                if (mons->number == 0)
                 {
                     mpr("Your battlesphere expends the last of its energy"
                         " and dissipates.");
@@ -2503,7 +2507,7 @@ void end_battlesphere(monster* mons, bool killed)
     }
 }
 
-static bool _battlesphere_can_mirror(spell_type spell)
+bool battlesphere_can_mirror(spell_type spell)
 {
     return (spell_typematch(spell, SPTYP_CONJURATION)
            && spell_to_zap(spell) != NUM_ZAPS)
@@ -2518,7 +2522,7 @@ static bool _battlesphere_can_mirror(spell_type spell)
 bool aim_battlesphere(actor* agent, spell_type spell, int powc, bolt& beam)
 {
     //Is this spell something that will trigger the battlesphere?
-    if (_battlesphere_can_mirror(spell))
+    if (battlesphere_can_mirror(spell))
     {
         monster* battlesphere = find_battlesphere(agent);
 
@@ -2910,7 +2914,8 @@ spret_type cast_spectral_weapon(actor *agent, int pow, god_type god, bool fail)
 
     item_def cp = *wpn;
 
-    // Remove any existing spectral weapons --- only one should be alive at any given time
+    // Remove any existing spectral weapons. Only one should be alive at any
+    // given time.
     monster *old_mons = find_spectral_weapon(agent);
     if (old_mons)
         end_spectral_weapon(old_mons, false);
@@ -2954,6 +2959,8 @@ spret_type cast_spectral_weapon(actor *agent, int pow, god_type god, bool fail)
             simple_monster_message(mons, " appears!");
 
         mons->props["band_leader"].get_int() = agent->mid;
+        mons->foe = agent->mindex();
+        mons->target = agent->pos();
     }
 
     mons->summoner = agent->mid;
@@ -3065,6 +3072,80 @@ bool confirm_attack_spectral_weapon(monster* mons, const actor *defender)
     return false;
 }
 
+void grand_avatar_reset(monster* mons)
+{
+    ASSERT(mons);
+    ASSERT(mons->type == MONS_GRAND_AVATAR);
+    actor* agent = actor_by_mid(mons->summoner);
+    if (!agent || !agent->alive())
+    {
+        monster_die(mons, KILL_TIMEOUT, NON_MONSTER);
+        return;
+    }
+    mons->props.erase(GA_TARGET_MID);
+    mons->props.erase(GA_MELEE);
+    mons->props.erase(GA_SPELL);
+    actor* foe = mons->get_foe();
+    if (foe)
+        mons->target = foe->pos();
+    else
+    {
+        mons->foe = agent->mindex();
+        mons->target = agent->pos();
+    }
+}
+
+bool grand_avatar_check_melee(monster* mons, actor* target)
+{
+    if (mons->props.exists(GA_TARGET_MID)
+        && mons->props.exists(GA_MELEE))
+    {
+        actor* desired_target =
+            actor_by_mid(mons->props[GA_TARGET_MID].get_int());
+        if (target == desired_target)
+        {
+            grand_avatar_reset(mons);
+            return true;
+        }
+    }
+    mons->lose_energy(EUT_ATTACK);
+    return false;
+}
+
+void trigger_grand_avatar(monster* mons, actor* victim, spell_type spell,
+                          const int old_hp)
+{
+    const bool melee = (spell == SPELL_MELEE);
+    ASSERT(mons->has_ench(ENCH_GRAND_AVATAR));
+
+    if (!victim
+        || !victim->alive()
+        || (!melee && !battlesphere_can_mirror(spell))
+        || old_hp - victim->stat_hp() < random2(GRAND_AVATAR_DAMAGE))
+    {
+        return;
+    }
+
+    actor* avatar = mons->get_ench(ENCH_GRAND_AVATAR).agent();
+    if (!avatar)
+        return;
+
+    ASSERT(avatar->is_monster());
+    monster* av = avatar->as_monster();
+
+    av->props[GA_TARGET_MID].get_int() = victim->mid;
+    if (melee)
+    {
+        av->props[GA_MELEE].get_bool() = true;
+        av->props.erase(GA_SPELL);
+    }
+    else
+    {
+        av->props[GA_SPELL].get_bool() = true;
+        av->props.erase(GA_MELEE);
+    }
+}
+
 spell_type summons_index::map(const summons_desc* val)
 {
     return val->which;
@@ -3108,7 +3189,9 @@ static const summons_desc summonsdata[] =
     { SPELL_FIRE_SUMMON,                4, 2 },
     { SPELL_SUMMON_MINOR_DEMON,         3, 3 },
     { SPELL_CALL_LOST_SOUL,             3, 2 },
-    { SPELL_SUMMON_VERMIN,              3, 2 },
+    { SPELL_SUMMON_VERMIN,              5, 2 },
+    { SPELL_FORCEFUL_INVITATION,        3, 1 },
+    { SPELL_PLANEREND,                  8, 1 },
     // Rod specials
     { SPELL_SUMMON_SWARM,              99, 2 },
     { SPELL_NO_SPELL,                   0, 0 }
@@ -3168,7 +3251,7 @@ void summoned_monster(const monster *mons, const actor *caster,
         }
     }
 
-    if (oldest_summon && (count > max_this_time))
+    if (oldest_summon && count > max_this_time)
     {
         // Timeout the oldest summon
         mon_enchant abj = oldest_summon->get_ench(ENCH_ABJ);
@@ -3178,4 +3261,21 @@ void summoned_monster(const monster *mons, const actor *caster,
         // one if creating multiple summons (also, should show a status light).
         oldest_summon->add_ench(ENCH_SUMMON_CAPPED);
     }
+}
+
+int count_summons(const actor *summoner, spell_type spell)
+{
+    int count = 0;
+    for (monster_iterator mi; mi; ++mi)
+    {
+        if (summoner == *mi)
+            continue;
+
+        int stype    = 0;
+        const bool summoned = mi->is_summoned(NULL, &stype);
+        if (summoned && stype == spell && summoner->mid == mi->summoner)
+            count++;
+    }
+
+    return count;
 }

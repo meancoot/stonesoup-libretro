@@ -158,7 +158,7 @@ static armour_type _pick_wearable_armour(const armour_type arm)
         // Check for Horns 3 & Antennae 3 - Don't give a cap if those mutation
         // levels have been reached.
         if (you.mutation[MUT_HORNS] <= 2 || you.mutation[MUT_ANTENNAE] <= 2)
-            result = coinflip() ? ARM_CAP : ARM_WIZARD_HAT;
+            result = ARM_HAT;
         else
             result = NUM_ARMOURS;
     }
@@ -524,20 +524,6 @@ static int _acquirement_weapon_subtype(bool divine)
     return result;
 }
 
-static bool _have_item_with_types(object_class_type basetype, int subtype)
-{
-    for (int i = 0; i < ENDOFPACK; i++)
-    {
-        const item_def& item = you.inv[i];
-        if (item.defined()
-            && item.base_type == basetype && item.sub_type == subtype)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 static missile_type _acquirement_missile_subtype()
 {
     int count = 0;
@@ -567,10 +553,11 @@ static missile_type _acquirement_missile_subtype()
             // Only give needles if they have a blowgun in inventory.
             vector<pair<missile_type, int> > missile_weights;
 
-            missile_weights.push_back(make_pair(MI_DART, 100));
-            missile_weights.push_back(make_pair(MI_TOMAHAWK, 100));
+            missile_weights.push_back(make_pair(MI_DART, 50));
+            missile_weights.push_back(make_pair(MI_TOMAHAWK, 75));
 
-            if (_have_item_with_types(OBJ_WEAPONS, WPN_BLOWGUN))
+            // Include the possibility of needles if they have some stealth skill.
+            if (x_chance_in_y(you.skills[SK_STEALTH], 15))
                 missile_weights.push_back(make_pair(MI_NEEDLE, 100));
 
             if (you.body_size() >= SIZE_MEDIUM)
@@ -712,8 +699,13 @@ static int _acquirement_wand_subtype()
         // First, weight according to usefulness.
         switch (type)
         {
-        case WAND_HASTING:          // each 17.9%, group unknown each 26.3%
         case WAND_HEAL_WOUNDS:
+            if (you.mutation[MUT_NO_DEVICE_HEAL])
+            {
+                w = 0;
+                break;
+            }
+        case WAND_HASTING:          // each 17.9%, group unknown each 26.3%
             w = 25; break;
         case WAND_TELEPORTATION:    // each 10.7%, group unknown each 17.6%
             w = 15; break;
@@ -938,10 +930,6 @@ static bool _do_book_acquirement(item_def &book, int agent)
         {
             skill_type sk = static_cast<skill_type>(i);
             int weight = you.skills[sk];
-
-            // Anyone can get Spellcasting 1. Doesn't prove anything.
-            if (sk == SK_SPELLCASTING && weight >= 1)
-                weight--;
 
             if (_is_magic_skill(sk))
                 magic_weights += weight;
@@ -1479,8 +1467,8 @@ int acquirement_create_item(object_class_type class_wanted,
     // If a god wants to give you something but the floor doesn't want it,
     // it counts as a failed acquirement - no piety, etc cost.
     if (feat_destroys_item(grd(pos), mitm[thing_created])
-        && (agent > GOD_NO_GOD)
-        && (agent < NUM_GODS))
+        && agent > GOD_NO_GOD
+        && agent < NUM_GODS)
     {
         if (agent == GOD_XOM)
             simple_god_message(" snickers.", GOD_XOM);

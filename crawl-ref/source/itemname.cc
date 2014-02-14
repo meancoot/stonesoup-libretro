@@ -52,6 +52,16 @@ static bool _is_random_name_vowel(char let);
 static char _random_vowel(int seed);
 static char _random_cons(int seed);
 
+static void _maybe_identify_pack_item()
+{
+    for (int i = 0; i < ENDOFPACK; i++)
+    {
+        item_def& item = you.inv[i];
+        if (item.defined() && get_ident_type(item) != ID_KNOWN_TYPE)
+            maybe_identify_base_type(item);
+    }
+}
+
 bool is_vowel(const ucs_t chr)
 {
     const char low = towlower(chr);
@@ -1433,7 +1443,8 @@ string item_def::name_aux(description_level_type desc, bool terse, bool ident,
                 buff << "uncursed ";
         }
 
-        if (know_pluses)
+        // Don't list uncorroded hides as +0.
+        if (know_pluses && !(armour_is_hide(*this) && it_plus == 0))
             buff << make_stringf("%+d ", it_plus);
 
         if (item_typ == ARM_GLOVES || item_typ == ARM_BOOTS)
@@ -2029,8 +2040,8 @@ void set_ident_type(item_def &item, item_type_id_state_type setting,
     if (is_artefact(item) || crawl_state.game_is_arena())
         return;
 
-    item_type_id_state_type old_setting = get_ident_type(item);
-    set_ident_type(item.base_type, item.sub_type, setting, force);
+    if (!set_ident_type(item.base_type, item.sub_type, setting, force))
+        return;
 
     if (in_inventory(item))
     {
@@ -2039,8 +2050,8 @@ void set_ident_type(item_def &item, item_type_id_state_type setting,
             item_skills(item, you.start_train);
     }
 
-    if (setting == ID_KNOWN_TYPE && old_setting != ID_KNOWN_TYPE
-        && notes_are_active() && is_interesting_item(item)
+    if (setting == ID_KNOWN_TYPE && notes_are_active()
+        && is_interesting_item(item)
         && !(item.flags & (ISFLAG_NOTED_ID | ISFLAG_NOTED_GET)))
     {
         // Make a note of it.
@@ -2053,7 +2064,7 @@ void set_ident_type(item_def &item, item_type_id_state_type setting,
     }
 }
 
-void set_ident_type(object_class_type basetype, int subtype,
+bool set_ident_type(object_class_type basetype, int subtype,
                      item_type_id_state_type setting, bool force)
 {
     preserve_quiver_slots p;
@@ -2062,18 +2073,36 @@ void set_ident_type(object_class_type basetype, int subtype,
         && (setting == ID_MON_TRIED_TYPE || setting == ID_TRIED_TYPE)
         && setting <= get_ident_type(basetype, subtype))
     {
-        return;
+        return false;
     }
 
     if (!item_type_has_ids(basetype))
-        return;
+        return false;
 
-    if (you.type_ids[basetype][subtype] != setting)
+    if (you.type_ids[basetype][subtype] == setting)
+        return false;
+
+    you.type_ids[basetype][subtype] = setting;
+    request_autoinscribe();
+    if (setting == ID_KNOWN_TYPE)
     {
-        you.type_ids[basetype][subtype] = setting;
-        request_autoinscribe();
-        if (setting == ID_KNOWN_TYPE)
-            shopping_list.item_type_identified(basetype, subtype);
+        shopping_list.item_type_identified(basetype, subtype);
+        _maybe_identify_pack_item();
+    }
+
+    return true;
+}
+
+void pack_item_identify_message(int base_type, int sub_type)
+{
+    for (int i = 0; i < ENDOFPACK; i++)
+    {
+        item_def& item = you.inv[i];
+        if (item.defined() && item.base_type == base_type
+            && item.sub_type == sub_type)
+        {
+            mprf_nocap("%s", item.name(DESC_INVENTORY_EQUIP).c_str());
+        }
     }
 }
 
@@ -2086,9 +2115,11 @@ void identify_healing_pots()
 
     if (ident_count == 1 && tried_count == 1)
     {
-        set_ident_type(OBJ_POTIONS, POT_CURING, ID_KNOWN_TYPE);
-        set_ident_type(OBJ_POTIONS, POT_HEAL_WOUNDS, ID_KNOWN_TYPE);
         mpr("You have identified the last healing potion.");
+        if (set_ident_type(OBJ_POTIONS, POT_CURING, ID_KNOWN_TYPE))
+            pack_item_identify_message(OBJ_POTIONS, POT_CURING);
+        if (set_ident_type(OBJ_POTIONS, POT_HEAL_WOUNDS, ID_KNOWN_TYPE))
+            pack_item_identify_message(OBJ_POTIONS, POT_HEAL_WOUNDS);
     }
 }
 
@@ -2202,9 +2233,9 @@ public:
         else
             symbol = '-';
 
-        return make_stringf("%c%c%c%c%s", hotkeys[0], need_cursor ? '[' : ' ',
-                                          symbol, need_cursor ? ']' : ' ',
-                                          name.c_str());
+        return make_stringf(" %c%c%c%c%s", hotkeys[0], need_cursor ? '[' : ' ',
+                                           symbol, need_cursor ? ']' : ' ',
+                                           name.c_str());
     }
 
     virtual int highlight_colour() const
@@ -2898,13 +2929,11 @@ bool is_emergency_item(const item_def &item)
         switch (item.sub_type)
         {
         case WAND_HASTING:
-            if (you_worship(GOD_CHEIBRIADOS))
-                return false;
+            return !you_worship(GOD_CHEIBRIADOS) && you.species != SP_FORMICID;
         case WAND_TELEPORTATION:
-            if (you.species == SP_FORMICID)
-                return false;
+            return you.species != SP_FORMICID;
         case WAND_HEAL_WOUNDS:
-            return true;
+            return !you.mutation[MUT_NO_DEVICE_HEAL];
         default:
             return false;
         }
@@ -2913,8 +2942,7 @@ bool is_emergency_item(const item_def &item)
         {
         case SCR_TELEPORTATION:
         case SCR_BLINKING:
-            if (you.species == SP_FORMICID)
-                return false;
+            return you.species != SP_FORMICID;
         case SCR_FEAR:
         case SCR_FOG:
             return true;
@@ -2928,10 +2956,10 @@ bool is_emergency_item(const item_def &item)
         switch (item.sub_type)
         {
         case POT_SPEED:
-            if (you_worship(GOD_CHEIBRIADOS) || you.species == SP_FORMICID)
-                return false;
-        case POT_CURING:
+            return !you_worship(GOD_CHEIBRIADOS) && you.species != SP_FORMICID;
         case POT_HEAL_WOUNDS:
+            return !you.mutation[MUT_NO_DEVICE_HEAL];
+        case POT_CURING:
         case POT_RESISTANCE:
         case POT_MAGIC:
             return true;
@@ -3225,6 +3253,13 @@ bool is_useless_item(const item_def &item, bool temp)
         if (you.species == SP_FELID)
             return true;
 
+        if (you.mutation[MUT_NO_DEVICE_HEAL]
+            && item_type_known(item)
+            && item.sub_type == WAND_HEAL_WOUNDS)
+        {
+            return true;
+        }
+
         if (item.sub_type == WAND_INVISIBILITY
             && item_type_known(item)
                 && _invisibility_is_useless(temp))
@@ -3232,7 +3267,7 @@ bool is_useless_item(const item_def &item, bool temp)
             return true;
         }
 
-        return (item.plus2 == ZAPCOUNT_EMPTY)
+        return item.plus2 == ZAPCOUNT_EMPTY
                 || item_ident(item, ISFLAG_KNOW_PLUSES) && !item.plus;
 
     case OBJ_POTIONS:
@@ -3301,7 +3336,8 @@ bool is_useless_item(const item_def &item, bool temp)
         case POT_SLOWING:
         case POT_PARALYSIS:
             return you.species == SP_FORMICID;
-
+        case POT_HEAL_WOUNDS:
+            return you.mutation[MUT_NO_DEVICE_HEAL];
         case POT_INVISIBILITY:
             return _invisibility_is_useless(temp);
         }
@@ -3489,7 +3525,7 @@ bool is_useless_item(const item_def &item, bool temp)
             return item_type_known(item);
 #endif
         case MISC_HORN_OF_GERYON:
-            return item.plus2;
+            return true;
         default:
             return false;
         }

@@ -247,7 +247,10 @@ static void _spread_fire(const cloud_struct &cloud)
                               cloud.killer, cloud.source, cloud.spread_rate,
                               cloud.colour, cloud.name, cloud.tile, cloud.excl_rad);
             if (cloud.whose == KC_YOU)
+            {
                 did_god_conduct(DID_KILL_PLANT, 1);
+                did_god_conduct(DID_FIRE, 6);
+            }
             else if (cloud.whose == KC_FRIENDLY && !crawl_state.game_is_arena())
                 did_god_conduct(DID_PLANT_KILLED_BY_SERVANT, 1);
         }
@@ -266,10 +269,10 @@ static void _cloud_interacts_with_terrain(const cloud_struct &cloud)
                 && feat_is_watery(grd(p))
                 && !cell_is_solid(p) // mangroves
                 && env.cgrid(p) == EMPTY_CLOUD
-                && one_chance_in(10))
+                && one_chance_in(7))
             {
                 _place_new_cloud(CLOUD_STEAM, p, cloud.decay / 2 + 1,
-                                 cloud.whose, cloud.killer, cloud.source);
+                                 cloud.whose, cloud.killer, cloud.source, 22);
             }
         }
     }
@@ -1091,8 +1094,8 @@ int actor_apply_cloud(actor *act)
         maybe_id_resist(cloud_flavour);
     }
 
-    if (player && cloud_flavour != BEAM_NONE)
-        expose_player_to_element(cloud_flavour, 7, true, false);
+    if (cloud_flavour != BEAM_NONE)
+        act->expose_to_element(cloud_flavour, 7, true, false);
 
     const bool side_effects =
         _actor_apply_cloud_side_effects(act, cloud, final_damage);
@@ -1561,17 +1564,5 @@ void run_cloud_spreaders(int dur)
             env.markers.remove(mark);
             break;
         }
-    }
-}
-
-void fume()
-{
-    static cloud_type clouds[] =
-        { CLOUD_PURPLE_SMOKE, CLOUD_BLUE_SMOKE, CLOUD_GREY_SMOKE };
-    if (you.mutation[MUT_FUMES])
-    {
-        int level = you.mutation[MUT_FUMES];
-        if (x_chance_in_y(you.time_taken * level, 35))
-            place_cloud(clouds[bestroll(3, 2)], you.pos(), 3 + random2(4), &you, 4);
     }
 }

@@ -28,7 +28,7 @@ function base_monster_setup(e)
            hill giant / komodo dragon / wraith / soldier ant / unseen horror /\
            trapdoor spider / basilisk / cyclops band / efreet /\
            mottled dragon / blink frog band / vampire mosquito band /\
-           griffon / ugly thing / gargoyle / molten gargoyle / metal gargoyle /\
+           griffon / ugly thing / gargoyle / molten gargoyle /\
            kobold demonologist band / giant slug / deep troll /\
            deep elf fighter band / agate snail / boulder beetle / red wasp /\
            orc high priest band w:5 / pulsating lump / boring beetle /\
@@ -81,7 +81,7 @@ function base_monster_setup(e)
            base draconian band w:5 / lorocyproca / daeva / angel /\
            profane servitor / soul eater / hell beast / cherub / apis / ophan /\
            balrug / green death / blizzard demon / deep elf blademaster /\
-           deep elf master archer")
+           deep elf master archer / war gargoyle")
   e.kmons("E = lich / tentacled monstrosity / golden dragon /\
            iron dragon / quicksilver dragon / titan / acid blob /\
            azure jelly / golden eye / ancient lich w:5 /\
@@ -281,8 +281,8 @@ function general_item_setup(e)
     helmet plus:2 good_item not_cursed ident:all /\
     cloak plus:4 not_cursed ident:all /\
     cloak plus:2 good_item not_cursed ident:all /\
-    wizard hat plus:4 not_cursed ident:all /\
-    wizard hat plus:2 good_item not_cursed ident:all /\
+    hat plus:4 not_cursed ident:all /\
+    hat plus:2 good_item not_cursed ident:all /\
     large shield plus:5 not_cursed ident:all /\
     large shield plus:3 good_item not_cursed ident:all /\
     naga barding plus:6 not_cursed ident:all w:5 /\
@@ -339,8 +339,8 @@ function general_item_setup(e)
     helmet plus:0 good_item not_cursed ident:all /\
     cloak plus:2 not_cursed ident:all /\
     cloak plus:0 good_item not_cursed ident:all /\
-    wizard hat plus:2 not_cursed ident:all /\
-    wizard hat plus:0 good_item not_cursed ident:all /\
+    hat plus:2 not_cursed ident:all /\
+    hat plus:0 good_item not_cursed ident:all /\
     large shield plus:3 not_cursed ident:all /\
     large shield plus:0 good_item not_cursed ident:all /\
     naga barding plus:2 not_cursed ident:all w:5 /\
@@ -1032,12 +1032,13 @@ KFEAT:   o = altar_beogh
 KFEAT:   p = altar_jiyva
 KFEAT:   q = altar_fedhas
 KFEAT:   r = altar_cheibriados
+KFEAT:   s = altar_dithmenos
 : general_setup(_G)
 : general_item_setup(_G)
 : base_monster_setup(_G)
 MAP
 hopnlfjida
-gqrmk..ebc
+gqrmk.sebc
 ENDMAP
 
 

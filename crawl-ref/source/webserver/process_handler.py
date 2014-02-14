@@ -158,23 +158,50 @@ class CrawlProcessHandlerBase(object):
 
         for watcher in list(self._receivers):
             if watcher.watched_game == self:
+                watcher.send_message("game_ended", reason = self.exit_reason,
+                                     message = self.exit_message,
+                                     dump = self.exit_dump_url)
                 watcher.go_lobby()
 
         if self.end_callback:
             self.end_callback()
 
     def update_watcher_description(self):
-        def wrap_name(watcher):
-            if watcher.watched_game:
-                return "<span class='watcher'>" + watcher.username + "</span>"
+        try:
+            player_url = config.player_url
+        except:
+            player_url = None
+        def wrap_name(watcher, is_player=False):
+            if is_player:
+                class_type = 'player'
             else:
-                return "<span class='player'>" + watcher.username + "</span>"
-        watcher_names = [wrap_name(w) for w in self._receivers
-                         if w.username]
+                class_type = 'watcher'
+            if player_url is None:
+                return "<span class='{0}'>{1}</span>".format(class_type,
+                                                             watcher)
+            username = "<a href='{0}' target='_blank' class='{1}'>{2}</a>".format(config.player_url, class_type, watcher)
+            username = username.replace('%s', watcher.lower())
+            return username
+
+        player_name = None
+        watchers = []
+        for w in self._receivers:
+            if not w.username:
+                continue
+            if not w.watched_game:
+                player_name = w.username
+            else:
+                watchers.append(w.username)
+        watchers.sort(key=lambda s:s.lower())
+        watcher_names = []
+        if player_name is not None:
+            watcher_names.append(wrap_name(player_name, True))
+        watcher_names += [wrap_name(w) for w in watchers]
+
         anon_count = len(self._receivers) - len(watcher_names)
         s = ", ".join(watcher_names)
         if len(watcher_names) > 0 and anon_count > 0:
-            s = s + ", and %i Anon" % anon_count
+            s = s + " and %i Anon" % anon_count
         elif anon_count > 0:
             s = "%i Anon" % anon_count
         self.send_to_all("update_spectators",
@@ -186,9 +213,10 @@ class CrawlProcessHandlerBase(object):
 
     def add_watcher(self, watcher):
         self.last_watcher_join = time.time()
-        self._receivers.add(watcher)
         if self.client_path:
             self._send_client(watcher)
+            watcher.send_json_options(self.game_params["id"], self.username)
+        self._receivers.add(watcher)
         self.update_watcher_description()
 
     def remove_watcher(self, watcher):
@@ -201,6 +229,9 @@ class CrawlProcessHandlerBase(object):
     def send_client_to_all(self):
         for receiver in self._receivers:
             self._send_client(receiver)
+            if receiver.watched_game:
+                receiver.send_json_options(self.game_params["id"],
+                                           self.username)
 
     def _send_client(self, watcher):
         h = hashlib.sha1(os.path.abspath(self.client_path))
@@ -327,6 +358,10 @@ class CrawlProcessHandler(CrawlProcessHandlerBase):
         self.inprogress_lock = None
         self.inprogress_lock_file = None
 
+        self.exit_reason = None
+        self.exit_message = None
+        self.exit_dump_url = None
+
         self._stale_pid = None
         self._stale_lockfile = None
         self._purging_timer = None
@@ -395,7 +430,7 @@ class CrawlProcessHandler(CrawlProcessHandlerBase):
                              self._stale_lockfile, self._stale_pid)
         elif signal == subprocess.signal.SIGTERM:
             self.logger.warning("Terminating pid %s forcefully!",
-                                self._stale_lockfile, self._stale_pid)
+                                self._stale_pid)
         try:
             os.kill(self._stale_pid, signal)
         except OSError, e:
@@ -630,6 +665,19 @@ class CrawlProcessHandler(CrawlProcessHandlerBase):
                 # only queue, once we know the crawl process asks for flushes
                 self.queue_messages = True;
                 self.flush_messages_to_all()
+            elif msgobj["msg"] == "dump":
+                if "morgue_url" in self.game_params and self.game_params["morgue_url"]:
+                    url = self.game_params["morgue_url"].replace("%n", self.username) + msgobj["filename"]
+                    if msgobj["type"] == "command":
+                        self.send_to_all("dump", url = url)
+                    else:
+                        self.exit_dump_url = url
+            elif msgobj["msg"] == "exit_reason":
+                self.exit_reason = msgobj["type"]
+                if "message" in msgobj:
+                    self.exit_message = msgobj["message"]
+                else:
+                    self.exit_message = None
             else:
                 self.logger.warning("Unknown message from the crawl process: %s",
                                     msgobj["msg"])
